@@ -16,6 +16,8 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     /// 調べられるものの前に立ったとき・離れたときに呼ばれる
     var onFocusChange: ((Interactable?) -> Void)?
     private(set) var focus: Interactable?
+    /// 画面下でタブバーなどに隠れる高さ（画面上のポイント）。マップの下端がその上に来るまでカメラを動かせる
+    var bottomInset: CGFloat = 0
 
     static var tile: CGFloat { 16 }
     let columns: Int
@@ -222,14 +224,14 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
         let visible = CGSize(width: view.bounds.width * scale, height: view.bounds.height * scale)
         let mapSize = CGSize(width: CGFloat(columns) * Self.tile, height: CGFloat(rows) * Self.tile)
 
-        func clamp(_ value: CGFloat, visible: CGFloat, map: CGFloat) -> CGFloat {
+        func clamp(_ value: CGFloat, visible: CGFloat, map: CGFloat, lowerInset: CGFloat = 0) -> CGFloat {
             guard visible < map else { return map / 2 }
-            return min(max(value, visible / 2), map - visible / 2)
+            return min(max(value, visible / 2 - lowerInset), map - visible / 2)
         }
         let target = CGPoint(x: player.position.x, y: player.position.y + 8)
         // 画面の1ドットに揃えてにじみを防ぐ
         let x = (clamp(target.x, visible: visible.width, map: mapSize.width) / scale).rounded() * scale
-        let y = (clamp(target.y, visible: visible.height, map: mapSize.height) / scale).rounded() * scale
+        let y = (clamp(target.y, visible: visible.height, map: mapSize.height, lowerInset: bottomInset * scale) / scale).rounded() * scale
         playerCamera.position = CGPoint(x: x, y: y)
     }
 

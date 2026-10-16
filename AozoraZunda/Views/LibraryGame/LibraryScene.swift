@@ -5,6 +5,8 @@ enum LibraryInteractable: WalkInteractable {
     /// かな行ごとの本棚（label は "あ"〜"わ"）
     case shelf(label: String)
     case librarian
+    /// 入口。ずんだもんの部屋に帰る
+    case exit
 
     var prompt: String {
         switch self {
@@ -12,11 +14,17 @@ enum LibraryInteractable: WalkInteractable {
             "「\(label)」の棚 ── \(label)行の作家の本が並んでいる"
         case .librarian:
             "司書さん ── 作品名や作家名で本をさがしてくれる"
+        case .exit:
+            "入口 ── ずんだもんの部屋に帰るのだ"
         }
     }
 
     var actionTitle: String {
-        self == .librarian ? "はなす" : "しらべる"
+        switch self {
+        case .shelf: "しらべる"
+        case .librarian: "はなす"
+        case .exit: "かえる"
+        }
     }
 }
 
@@ -25,7 +33,8 @@ final class LibraryScene: WalkScene<LibraryInteractable> {
     private static let shelfLabels = ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ"]
 
     init() {
-        super.init(columns: 24, rows: 20, playerStart: (12, 17.6))
+        // 入口のマットの少し上から始める（着いた途端に「かえる」が出ないように）
+        super.init(columns: 24, rows: 20, playerStart: (12, 16.6))
     }
 
     override func buildMap() {
@@ -49,8 +58,13 @@ final class LibraryScene: WalkScene<LibraryInteractable> {
             place("wall_side", column: 0, row: CGFloat(row), z: -8_000)
             place("wall_side", column: CGFloat(columns - 1), row: CGFloat(row), z: -8_000)
         }
-        for column in 1..<(columns - 1) {
+        // 下の壁の玄関マットの前は入口として空けておく
+        let entrance = 11...12
+        for column in 1..<(columns - 1) where !entrance.contains(column) {
             place("wall_side", column: CGFloat(column), row: CGFloat(rows - 1), z: 5_000)
+        }
+        for column in entrance {
+            place("floor_0", column: CGFloat(column), row: CGFloat(rows - 1), z: -10_000)
         }
         for column in [3, 8, 14, 19] {
             place("window", column: CGFloat(column), row: 0, z: -8_500)
@@ -66,6 +80,7 @@ final class LibraryScene: WalkScene<LibraryInteractable> {
     private func buildFurniture() {
         place("rug", column: 10, row: 11, z: -9_500)
         place("doormat", column: 11, row: 18.2, z: -9_500)
+        addZone(column: 10.5, row: 17.7, width: 3, height: 1.5, interactable: .exit, anchor: (12, 17.2))
 
         // 本棚: 上の列に6つ、下の列に4つ（中央の通路を空ける）
         let upperColumns: [CGFloat] = [2, 5, 8, 14, 17, 20]

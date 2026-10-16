@@ -21,7 +21,8 @@ struct ContentView: View {
                 LibraryView { tab = .library }
             }
             Tab("としょかん", systemImage: "building.columns", value: .library) {
-                CatalogView()
+                // 図書館の入口から部屋へ帰れる
+                CatalogView { tab = .room }
             }
         }
     }

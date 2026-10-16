@@ -3,6 +3,8 @@ import SwiftUI
 /// 青空文庫の作品をさがす画面。図書館の中を歩いて本棚や司書さんを調べる
 struct CatalogView: View {
     @Environment(CatalogStore.self) private var catalog
+    /// 「本棚」タブ（ずんだもんの部屋）へ戻る
+    let goToRoom: () -> Void
     @State private var path = NavigationPath()
     @State private var scene = LibraryScene()
 
@@ -14,6 +16,8 @@ struct CatalogView: View {
                     path.append(ShelfRoute(label: label))
                 case .librarian:
                     path.append(SearchRoute())
+                case .exit:
+                    goToRoom()
                 }
             }
             .toolbarVisibility(.hidden, for: .navigationBar)
