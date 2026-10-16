@@ -141,14 +141,21 @@ private struct MessageWindow: View {
 
     var body: some View {
         Text(text)
-            .font(.system(.subheadline, design: .rounded, weight: .semibold))
+            .gameWindowStyle()
+            .animation(.easeOut(duration: 0.15), value: text)
+    }
+}
+
+extension View {
+    /// 紺地に白枠の RPG 風ウインドウの見た目にする
+    func gameWindowStyle() -> some View {
+        font(.system(.subheadline, design: .rounded, weight: .semibold))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(Color(red: 0.12, green: 0.14, blue: 0.28).opacity(0.92), in: RoundedRectangle(cornerRadius: 6))
             .overlay(RoundedRectangle(cornerRadius: 6).inset(by: 2).stroke(.white, lineWidth: 2))
-            .animation(.easeOut(duration: 0.15), value: text)
     }
 }
 

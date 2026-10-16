@@ -18,13 +18,10 @@ struct CatalogView: View {
             .toolbarVisibility(.hidden, for: .navigationBar)
             .navigationTitle("としょかん")
             .navigationDestination(for: ShelfRoute.self) { route in
-                ShelfView(label: route.label)
+                BookshelfView(label: route.label)
             }
             .navigationDestination(for: SearchRoute.self) { _ in
                 CatalogSearchView()
-            }
-            .navigationDestination(for: CatalogAuthor.self) { author in
-                AuthorWorksView(author: author)
             }
             .navigationDestination(for: CatalogBook.self) { book in
                 BookDetailView(book: book)
@@ -46,7 +43,7 @@ private struct ShelfRoute: Hashable {
 private struct SearchRoute: Hashable {}
 
 /// 作品一覧の取得が終わるまでは読み込み中・エラーを表示する
-private struct CatalogContent<Content: View>: View {
+struct CatalogContent<Content: View>: View {
     @Environment(CatalogStore.self) private var catalog
     @ViewBuilder let content: () -> Content
 
@@ -69,59 +66,6 @@ private struct CatalogContent<Content: View>: View {
             }
         } else {
             content()
-        }
-    }
-}
-
-/// かな行ごとの本棚。並んでいる作家を頭文字ごとに分けて表示する
-private struct ShelfView: View {
-    @Environment(CatalogStore.self) private var catalog
-    let label: String
-
-    var body: some View {
-        CatalogContent {
-            let authors = catalog.authorSections.first { $0.title == label }?.authors ?? []
-            let groups = Dictionary(grouping: authors) { String($0.sortKey.prefix(1)) }
-                .sorted { $0.key < $1.key }
-            if authors.isEmpty {
-                ContentUnavailableView("この棚には本がありません", systemImage: "books.vertical")
-            } else {
-                List {
-                    ForEach(groups, id: \.key) { initial, members in
-                        Section(initial) {
-                            ForEach(members) { author in
-                                NavigationLink(value: author) {
-                                    AuthorRow(author: author)
-                                }
-                            }
-                        }
-                        .sectionIndexLabel(initial)
-                    }
-                }
-                .listStyle(.plain)
-                .listSectionIndexVisibility(.visible)
-            }
-        }
-        .navigationTitle("「\(label)」の棚")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-private struct AuthorRow: View {
-    let author: CatalogAuthor
-
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(author.name)
-                Text(author.yomi)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Text("\(author.workCount)作品")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
     }
 }
@@ -184,22 +128,6 @@ private struct SearchResultsView: View {
             }
             .listStyle(.plain)
         }
-    }
-}
-
-private struct AuthorWorksView: View {
-    @Environment(CatalogStore.self) private var catalog
-    let author: CatalogAuthor
-
-    var body: some View {
-        List(catalog.works(byAuthor: author.id)) { book in
-            NavigationLink(value: book) {
-                BookRow(book: book, showsAuthor: false)
-            }
-        }
-        .listStyle(.plain)
-        .navigationTitle(author.name)
-        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
