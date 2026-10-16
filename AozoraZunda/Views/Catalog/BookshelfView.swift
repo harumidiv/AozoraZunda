@@ -5,6 +5,8 @@ struct BookshelfView: View {
     @Environment(CatalogStore.self) private var catalog
     @Environment(LibraryStore.self) private var library
     let label: String
+    /// 司書さんに案内されたときは、この作家の仕切り板の段から表示する
+    var initialAuthorID: String?
 
     @State private var selection: ShelfItem.ID?
     @State private var readingBook: CatalogBook?
@@ -40,32 +42,36 @@ struct BookshelfView: View {
             let rows = ShelfLayout.rows(of: items, width: geometry.size.width - ShelfLayout.indexWidth - ShelfLayout.sideInset * 2)
             let jumps = ShelfLayout.jumpTargets(in: rows)
             ScrollViewReader { proxy in
-                ZStack(alignment: .top) {
-                    HStack(spacing: 0) {
-                        ScrollView {
-                            LazyVStack(spacing: 0) {
-                                // 上のメッセージウインドウに隠れないぶん空ける
-                                Color.clear.frame(height: 124)
-                                ForEach(rows.indices, id: \.self) { index in
-                                    ShelfRow(items: rows[index], selection: $selection)
-                                        .id(index)
-                                }
-                                Color.clear.frame(height: 24)
+                HStack(spacing: 0) {
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(rows.indices, id: \.self) { index in
+                                ShelfRow(items: rows[index], selection: $selection)
+                                    .id(index)
                             }
-                            .padding(.horizontal, ShelfLayout.sideInset)
+                            Color.clear.frame(height: 24)
                         }
-                        .scrollIndicators(.hidden)
-                        InitialIndex(entries: jumps) { row in
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                proxy.scrollTo(row, anchor: .top)
-                            }
-                        }
-                        .frame(width: ShelfLayout.indexWidth)
+                        .padding(.horizontal, ShelfLayout.sideInset)
                     }
-
+                    .scrollIndicators(.hidden)
+                    InitialIndex(entries: jumps) { row in
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            proxy.scrollTo(row, anchor: .top)
+                        }
+                    }
+                    .frame(width: ShelfLayout.indexWidth)
+                }
+                // 本はウインドウの下に隠れながらスクロールし、索引で移動したときはウインドウのすぐ下に来る
+                .safeAreaInset(edge: .top) {
                     window(for: selected, authorCount: authors.count, bookCount: items.count - authors.count)
                         .padding(.horizontal)
-                        .padding(.top, 8)
+                        .padding(.vertical, 8)
+                }
+                .task {
+                    guard let initialAuthorID,
+                          let row = rows.firstIndex(where: { $0.contains { $0.id == ShelfItem.divider(id: initialAuthorID) } })
+                    else { return }
+                    proxy.scrollTo(row, anchor: .top)
                 }
             }
         }
@@ -131,9 +137,13 @@ private enum ShelfItem: Identifiable {
     /// 共著の作品は複数の作家の棚に並ぶので、ID には作家も含める
     case book(CatalogBook, authorID: String)
 
+    static func divider(id authorID: String) -> String {
+        "author-\(authorID)"
+    }
+
     var id: String {
         switch self {
-        case .divider(let author): "author-\(author.id)"
+        case .divider(let author): Self.divider(id: author.id)
         case .book(let book, let authorID): "book-\(authorID)-\(book.id)"
         }
     }
@@ -195,7 +205,7 @@ private enum ShelfLayout {
 
 // MARK: - 見た目
 
-private enum ShelfPalette {
+enum ShelfPalette {
     static let back = Color(red: 0.24, green: 0.16, blue: 0.10)
     static let frame = Color(red: 0.35, green: 0.23, blue: 0.15)
     static let plank = Color(red: 0.54, green: 0.35, blue: 0.21)
@@ -261,7 +271,7 @@ private struct ShelfRow: View {
 }
 
 /// 作品の背表紙。色と高さは作品ごとに決まっていて毎回同じになる
-private struct BookSpine: View {
+struct BookSpine: View {
     @Environment(LibraryStore.self) private var library
     let book: CatalogBook
     let isSelected: Bool
@@ -279,7 +289,8 @@ private struct BookSpine: View {
                 .foregroundStyle(ink)
                 .padding(.top, 8)
                 .frame(width: ShelfLayout.spineWidth, height: height, alignment: .top)
-                .background(color)
+                // 画面の端に接していても色を安全領域まで伸ばさない
+                .background(color, ignoresSafeAreaEdges: [])
                 .overlay(alignment: .bottom) {
                     // 背表紙の下の帯
                     Rectangle().fill(.black.opacity(0.18)).frame(height: 6).padding(.bottom, 6)
@@ -406,7 +417,7 @@ private struct InitialIndex: View {
 }
 
 /// メッセージウインドウ内の選択肢
-private struct WindowChoice: View {
+struct WindowChoice: View {
     let title: String
     let action: () -> Void
 
@@ -418,7 +429,7 @@ private struct WindowChoice: View {
     }
 }
 
-private struct ChoiceLabel: View {
+struct ChoiceLabel: View {
     let title: String
 
     var body: some View {

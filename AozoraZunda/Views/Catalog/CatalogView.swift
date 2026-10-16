@@ -18,10 +18,10 @@ struct CatalogView: View {
             .toolbarVisibility(.hidden, for: .navigationBar)
             .navigationTitle("としょかん")
             .navigationDestination(for: ShelfRoute.self) { route in
-                BookshelfView(label: route.label)
+                BookshelfView(label: route.label, initialAuthorID: route.authorID)
             }
             .navigationDestination(for: SearchRoute.self) { _ in
-                CatalogSearchView()
+                LibrarianView()
             }
             .navigationDestination(for: CatalogBook.self) { book in
                 BookDetailView(book: book)
@@ -36,8 +36,10 @@ struct CatalogView: View {
     }
 }
 
-private struct ShelfRoute: Hashable {
+struct ShelfRoute: Hashable {
     let label: String
+    /// 指定すると、その作家の仕切り板の段から表示する
+    var authorID: String?
 }
 
 private struct SearchRoute: Hashable {}
@@ -66,96 +68,6 @@ struct CatalogContent<Content: View>: View {
             }
         } else {
             content()
-        }
-    }
-}
-
-/// 司書さんに頼む検索
-private struct CatalogSearchView: View {
-    @Environment(CatalogStore.self) private var catalog
-    @State private var query = ""
-
-    var body: some View {
-        CatalogContent {
-            if query.trimmingCharacters(in: .whitespaces).isEmpty {
-                ContentUnavailableView(
-                    "どんな本をおさがしですか？",
-                    systemImage: "magnifyingglass",
-                    description: Text("作品名・作家名・よみがなで検索できます")
-                )
-            } else {
-                SearchResultsView(query: query)
-            }
-        }
-        .navigationTitle("司書さんにたずねる")
-        .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "作品名・作家名・よみがな")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button("作品一覧を更新", systemImage: "arrow.clockwise") {
-                        Task { await catalog.refresh() }
-                    }
-                    .disabled(catalog.phase == .loading)
-                    if let updatedAt = catalog.updatedAt {
-                        Text("最終更新: \(updatedAt.formatted(date: .abbreviated, time: .shortened))")
-                    }
-                } label: {
-                    Label("メニュー", systemImage: "ellipsis")
-                }
-            }
-        }
-    }
-}
-
-private struct SearchResultsView: View {
-    @Environment(CatalogStore.self) private var catalog
-    let query: String
-
-    var body: some View {
-        let results = catalog.search(query)
-        if results.isEmpty {
-            ContentUnavailableView.search(text: query)
-        } else {
-            List {
-                Section("\(results.count)件") {
-                    ForEach(results) { book in
-                        NavigationLink(value: book) {
-                            BookRow(book: book)
-                        }
-                    }
-                }
-            }
-            .listStyle(.plain)
-        }
-    }
-}
-
-struct BookRow: View {
-    @Environment(LibraryStore.self) private var library
-    let book: CatalogBook
-    var showsAuthor = true
-
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(book.displayTitle)
-                if showsAuthor {
-                    Text(book.displayCredit)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else if !book.translatorName.isEmpty {
-                    Text("\(book.translatorName) 訳")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            Spacer()
-            if library.isDownloaded(book.id) {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .accessibilityLabel("ダウンロード済み")
-            }
         }
     }
 }

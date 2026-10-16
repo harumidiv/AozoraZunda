@@ -46,12 +46,28 @@ final class CatalogStore {
         index.worksByAuthor[authorID] ?? []
     }
 
-    func search(_ query: String) -> [CatalogBook] {
+    /// 題名・副題・題名のよみだけを対象に探す
+    func searchTitles(_ query: String) -> [CatalogBook] {
+        Self.filter(index.sortedBooks, keys: index.titleKeys, by: query)
+    }
+
+    /// 作家名・作家名のよみで探す
+    func searchAuthors(_ query: String) -> [CatalogAuthor] {
+        let authors = authorSections.flatMap(\.authors)
+        return Self.filter(authors, keys: authors.map { CatalogIndex.normalize("\($0.name) \($0.yomi)") }, by: query)
+    }
+
+    /// 作家が並んでいる棚（かな行）
+    func shelfLabel(ofAuthor authorID: String) -> String? {
+        authorSections.first { $0.authors.contains { $0.id == authorID } }?.title
+    }
+
+    private static func filter<Item>(_ items: [Item], keys: [String], by query: String) -> [Item] {
         let keywords = CatalogIndex.normalize(query)
             .split(whereSeparator: \.isWhitespace)
             .map(String.init)
         guard !keywords.isEmpty else { return [] }
-        return zip(index.sortedBooks, index.searchKeys)
+        return zip(items, keys)
             .filter { _, key in keywords.allSatisfy { key.contains($0) } }
             .map(\.0)
     }
@@ -107,17 +123,17 @@ nonisolated private struct CatalogCache: Codable {
 /// 一覧表示・検索用に前計算したデータ
 nonisolated private struct CatalogIndex: Sendable {
     let sortedBooks: [CatalogBook]
-    let searchKeys: [String]
+    let titleKeys: [String]
     let worksByAuthor: [String: [CatalogBook]]
     let authorSections: [AuthorSection]
 
-    static let empty = CatalogIndex(sortedBooks: [], searchKeys: [], worksByAuthor: [:], authorSections: [])
+    static let empty = CatalogIndex(sortedBooks: [], titleKeys: [], worksByAuthor: [:], authorSections: [])
 
     @concurrent
     static func build(from books: [CatalogBook]) async -> CatalogIndex {
         let sortedBooks = books.sorted { $0.titleSortKey < $1.titleSortKey }
-        let searchKeys = sortedBooks.map { book in
-            normalize([book.title, book.titleYomi, book.subtitle, book.authorName, book.authorYomi, book.translatorName].joined(separator: " "))
+        let titleKeys = sortedBooks.map { book in
+            normalize([book.title, book.titleYomi, book.subtitle].joined(separator: " "))
         }
         let worksByAuthor = Dictionary(grouping: sortedBooks, by: \.authorID)
 
@@ -139,7 +155,7 @@ nonisolated private struct CatalogIndex: Sendable {
         }
         sections.sort { rowOrder.firstIndex(of: $0.title) ?? .max < rowOrder.firstIndex(of: $1.title) ?? .max }
 
-        return CatalogIndex(sortedBooks: sortedBooks, searchKeys: searchKeys, worksByAuthor: worksByAuthor, authorSections: sections)
+        return CatalogIndex(sortedBooks: sortedBooks, titleKeys: titleKeys, worksByAuthor: worksByAuthor, authorSections: sections)
     }
 
     /// 大文字小文字・ひらがなカタカナの違いを無視して検索するための正規化
