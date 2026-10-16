@@ -34,9 +34,22 @@
 		5A1CE0062F00000000A0B1C2 /* voicevox_onnxruntime.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = voicevox_onnxruntime.xcframework; path = VoiceBox/voicevox_onnxruntime.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		5A1CE0092F00000000A0B1C2 /* Exceptions for "AozoraZunda" folder in "AozoraZunda" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 057A9B253081C5CF000F7CCA /* AozoraZunda */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		057A9B283081C5CF000F7CCA /* AozoraZunda */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				5A1CE0092F00000000A0B1C2 /* Exceptions for "AozoraZunda" folder in "AozoraZunda" target */,
+			);
 			path = AozoraZunda;
 			sourceTree = "<group>";
 		};
@@ -293,6 +306,7 @@
 				DEVELOPMENT_TEAM = 24BSY9Z4H5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AozoraZunda/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -325,6 +339,7 @@
 				DEVELOPMENT_TEAM = 24BSY9Z4H5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AozoraZunda/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

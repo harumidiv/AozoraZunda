@@ -1,4 +1,5 @@
 import AVFoundation
+import MediaPlayer
 import Observation
 import UIKit
 
@@ -15,7 +16,8 @@ protocol ReadAloudPageSource: AnyObject {
     func showPage(_ index: Int)
 }
 
-/// ずんだもんの声で本を読み上げる。今のページから1文ずつ読み、ページの終わりで自動でめくる
+/// ずんだもんの声で本を読み上げる。今のページから1文ずつ読み、ページの終わりで自動でめくる。
+/// アプリがバックグラウンドにいても読み続け、ロック画面やコントロールセンターから止めたり再開したりできる
 @Observable
 final class ReadAloudController: NSObject {
     enum State: Equatable {
@@ -29,10 +31,18 @@ final class ReadAloudController: NSObject {
     private(set) var state = State.idle
     private(set) var style = ZundaStyle.normal
     @ObservationIgnored weak var source: ReadAloudPageSource?
+    /// ロック画面などに表示する作品名と作家名
+    @ObservationIgnored var nowPlayingTitle = ""
+    @ObservationIgnored var nowPlayingAuthor = ""
 
     @ObservationIgnored private var task: Task<Void, Never>?
-    @ObservationIgnored private var player: AVAudioPlayer?
     @ObservationIgnored private var playbackContinuation: CheckedContinuation<Void, Never>?
+    // 文と文の間も止めずに鳴らし続けて、バックグラウンドでアプリが止められないようにする
+    @ObservationIgnored private let engine = AVAudioEngine()
+    @ObservationIgnored private let playerNode = AVAudioPlayerNode()
+    @ObservationIgnored private var connectedFormat: AVAudioFormat?
+    @ObservationIgnored private var remoteCommandTargets: [(MPRemoteCommand, Any)] = []
+    @ObservationIgnored private var notificationObservers: [NSObjectProtocol] = []
 
     /// 1回に合成する長さの上限。長すぎると合成に時間がかかって間が空く
     private static let maxSentenceLength = 120
@@ -41,12 +51,20 @@ final class ReadAloudController: NSObject {
         state == .preparing || state == .speaking
     }
 
+    override init() {
+        super.init()
+        engine.attach(playerNode)
+        observeAudioSession()
+    }
+
     func start(style: ZundaStyle) {
         guard let source else { return }
-        stop()
+        stopReading()
         self.style = style
         state = .preparing
         activateAudioSession()
+        registerRemoteCommands()
+        updateNowPlaying()
         UIApplication.shared.isIdleTimerDisabled = true
         let startPage = source.currentPageIndex
         task = Task { [weak self] in
@@ -60,11 +78,27 @@ final class ReadAloudController: NSObject {
         start(style: style ?? self.style)
     }
 
+    /// 読み上げを止める。ロック画面の表示は残すので、そこから続きを再開できる
     func stop() {
+        stopReading()
+        updateNowPlaying()
+    }
+
+    /// 読書画面を閉じるとき。ロック画面の表示と操作も片付ける
+    func shutdown() {
+        stopReading()
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+        for (command, target) in remoteCommandTargets {
+            command.removeTarget(target)
+        }
+        remoteCommandTargets = []
+    }
+
+    private func stopReading() {
         task?.cancel()
         task = nil
-        player?.stop()
-        player = nil
+        playerNode.stop()
+        engine.stop()
         finishPlayback()
         if isActive {
             state = .idle
@@ -86,7 +120,7 @@ final class ReadAloudController: NSObject {
         var next = await utterances.next(from: source).map { ($0, synthesize($0)) }
         do {
             while let (utterance, audio) = next {
-                let data = try await audio.value
+                let buffer = try await audio.value
                 try Task.checkCancellation()
                 // 再生している間に次の文を合成しておく
                 next = await utterances.next(from: source).map { ($0, synthesize($0)) }
@@ -94,8 +128,11 @@ final class ReadAloudController: NSObject {
                     source?.showPage(utterance.page)
                     shownPage = utterance.page
                 }
-                state = .speaking
-                try await play(data)
+                if state != .speaking {
+                    state = .speaking
+                    updateNowPlaying()
+                }
+                try await play(buffer)
             }
             stop()
         } catch is CancellationError {
@@ -106,10 +143,11 @@ final class ReadAloudController: NSObject {
         }
     }
 
-    private func synthesize(_ utterance: Utterance) -> Task<Data, Error> {
+    private func synthesize(_ utterance: Utterance) -> Task<AVAudioPCMBuffer, Error> {
         let style = style
         return Task.detached {
-            try await ZundaVoiceEngine.shared.synthesize(utterance.text, style: style)
+            let wav = try await ZundaVoiceEngine.shared.synthesize(utterance.text, style: style)
+            return try WAVDecoder.buffer(from: wav)
         }
     }
 
@@ -184,24 +222,39 @@ final class ReadAloudController: NSObject {
 
     // MARK: - 再生
 
-    private func play(_ data: Data) async throws {
-        let player = try AVAudioPlayer(data: data)
-        player.delegate = self
-        self.player = player
+    private func play(_ buffer: AVAudioPCMBuffer) async throws {
+        try startEngine(format: buffer.format)
         await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
                 playbackContinuation = continuation
-                if !player.play() {
-                    finishPlayback()
+                playerNode.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
+                    Task { @MainActor in
+                        self?.finishPlayback()
+                    }
                 }
             }
         } onCancel: {
             Task { @MainActor [weak self] in
-                self?.player?.stop()
+                self?.playerNode.stop()
                 self?.finishPlayback()
             }
         }
         try Task.checkCancellation()
+    }
+
+    /// エンジンを動かし、プレーヤーを鳴らしっぱなしにしておく（次の文を流し込むまでは無音が流れる）
+    private func startEngine(format: AVAudioFormat) throws {
+        if connectedFormat != format {
+            playerNode.stop()
+            engine.connect(playerNode, to: engine.mainMixerNode, format: format)
+            connectedFormat = format
+        }
+        if !engine.isRunning {
+            try engine.start()
+        }
+        if !playerNode.isPlaying {
+            playerNode.play()
+        }
     }
 
     private func finishPlayback() {
@@ -214,18 +267,129 @@ final class ReadAloudController: NSObject {
         try? session.setCategory(.playback, mode: .spokenAudio)
         try? session.setActive(true)
     }
-}
 
-extension ReadAloudController: AVAudioPlayerDelegate {
-    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        Task { @MainActor in
-            self.finishPlayback()
+    // MARK: - 割り込み・イヤホン
+
+    private func observeAudioSession() {
+        let center = NotificationCenter.default
+        notificationObservers.append(center.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] notification in
+            let info = notification.userInfo
+            let type = (info?[AVAudioSessionInterruptionTypeKey] as? UInt).flatMap(AVAudioSession.InterruptionType.init)
+            let options = (info?[AVAudioSessionInterruptionOptionKey] as? UInt).map(AVAudioSession.InterruptionOptions.init) ?? []
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                switch type {
+                case .began:
+                    // 電話などが来たら止める。終わったら続きから読む
+                    self.wasInterrupted = self.isActive
+                    self.stop()
+                case .ended:
+                    if self.wasInterrupted, options.contains(.shouldResume) {
+                        self.start(style: self.style)
+                    }
+                    self.wasInterrupted = false
+                default:
+                    break
+                }
+            }
+        })
+        notificationObservers.append(center.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) { [weak self] notification in
+            let reason = (notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt).flatMap(AVAudioSession.RouteChangeReason.init)
+            MainActor.assumeIsolated {
+                // イヤホンを外したら、スピーカーから急に鳴り出さないよう止める
+                if reason == .oldDeviceUnavailable {
+                    self?.stop()
+                }
+            }
+        })
+    }
+
+    @ObservationIgnored private var wasInterrupted = false
+
+    // MARK: - ロック画面
+
+    private func registerRemoteCommands() {
+        guard remoteCommandTargets.isEmpty else { return }
+        let center = MPRemoteCommandCenter.shared()
+        func add(_ command: MPRemoteCommand, _ action: @escaping (ReadAloudController) -> Void) {
+            let target = command.addTarget { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return .commandFailed }
+                    action(self)
+                    return .success
+                }
+            }
+            remoteCommandTargets.append((command, target))
+        }
+        add(center.playCommand) { $0.start(style: $0.style) }
+        add(center.pauseCommand) { $0.stop() }
+        add(center.togglePlayPauseCommand) { controller in
+            if controller.isActive {
+                controller.stop()
+            } else {
+                controller.start(style: controller.style)
+            }
         }
     }
 
-    nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
-        Task { @MainActor in
-            self.finishPlayback()
+    private func updateNowPlaying() {
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = [
+            MPMediaItemPropertyTitle: nowPlayingTitle,
+            MPMediaItemPropertyArtist: "ずんだもん（\(style.label)）",
+            MPMediaItemPropertyAlbumTitle: nowPlayingAuthor,
+            MPNowPlayingInfoPropertyPlaybackRate: isActive ? 1.0 : 0.0,
+        ]
+        MPNowPlayingInfoCenter.default().playbackState = isActive ? .playing : .paused
+    }
+}
+
+/// VOICEVOX が返す WAV（リニア PCM）を再生用のバッファにする
+nonisolated enum WAVDecoder {
+    struct InvalidWAV: LocalizedError {
+        var errorDescription: String? { "音声データを読み取れませんでした" }
+    }
+
+    static func buffer(from data: Data) throws -> AVAudioPCMBuffer {
+        let bytes = [UInt8](data)
+        guard bytes.count > 12, String(decoding: bytes[0..<4], as: UTF8.self) == "RIFF",
+              String(decoding: bytes[8..<12], as: UTF8.self) == "WAVE" else { throw InvalidWAV() }
+
+        func uint16(_ offset: Int) -> Int { Int(bytes[offset]) | Int(bytes[offset + 1]) << 8 }
+        func uint32(_ offset: Int) -> Int { uint16(offset) | uint16(offset + 2) << 16 }
+
+        var channels = 0, sampleRate = 0, bitsPerSample = 0
+        var samples: ArraySlice<UInt8>?
+        var offset = 12
+        while offset + 8 <= bytes.count {
+            let id = String(decoding: bytes[offset..<offset + 4], as: UTF8.self)
+            let size = uint32(offset + 4)
+            let body = offset + 8
+            guard body + size <= bytes.count else { break }
+            if id == "fmt " {
+                channels = uint16(body + 2)
+                sampleRate = uint32(body + 4)
+                bitsPerSample = uint16(body + 14)
+            } else if id == "data" {
+                samples = bytes[body..<body + size]
+            }
+            offset = body + size + size % 2
         }
+        guard let samples, channels > 0, sampleRate > 0, bitsPerSample == 16,
+              let format = AVAudioFormat(standardFormatWithSampleRate: Double(sampleRate), channels: AVAudioChannelCount(channels))
+        else { throw InvalidWAV() }
+
+        let frameCount = samples.count / 2 / channels
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frameCount)),
+              let output = buffer.floatChannelData else { throw InvalidWAV() }
+        buffer.frameLength = AVAudioFrameCount(frameCount)
+        let start = samples.startIndex
+        for frame in 0..<frameCount {
+            for channel in 0..<channels {
+                let index = start + (frame * channels + channel) * 2
+                let value = Int16(bitPattern: UInt16(samples[index]) | UInt16(samples[index + 1]) << 8)
+                output[channel][frame] = Float(value) / Float(Int16.max)
+            }
+        }
+        return buffer
     }
 }

@@ -94,8 +94,13 @@ struct ReaderView: View {
             // 組版し直すとページが変わるので、読み上げは止める
             readAloud.stop()
         }
+        .onAppear {
+            readAloud.nowPlayingTitle = book.displayTitle
+            readAloud.nowPlayingAuthor = book.displayCredit
+        }
         .onDisappear {
-            readAloud.stop()
+            // バックグラウンドに回っただけでは呼ばれないので、読み上げは続く
+            readAloud.shutdown()
         }
         .task {
             await loadDocument()
