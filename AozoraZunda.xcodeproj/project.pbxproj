@@ -6,8 +6,32 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		5A1CE0012F00000000A0B1C2 /* voicevox_core.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5A1CE0052F00000000A0B1C2 /* voicevox_core.xcframework */; };
+		5A1CE0022F00000000A0B1C2 /* voicevox_core.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5A1CE0052F00000000A0B1C2 /* voicevox_core.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		5A1CE0032F00000000A0B1C2 /* voicevox_onnxruntime.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5A1CE0062F00000000A0B1C2 /* voicevox_onnxruntime.xcframework */; };
+		5A1CE0042F00000000A0B1C2 /* voicevox_onnxruntime.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5A1CE0062F00000000A0B1C2 /* voicevox_onnxruntime.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		5A1CE0072F00000000A0B1C2 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				5A1CE0042F00000000A0B1C2 /* voicevox_onnxruntime.xcframework in Embed Frameworks */,
+				5A1CE0022F00000000A0B1C2 /* voicevox_core.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		057A9B263081C5CF000F7CCA /* AozoraZunda.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AozoraZunda.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A1CE0052F00000000A0B1C2 /* voicevox_core.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = voicevox_core.xcframework; path = VoiceBox/voicevox_core.xcframework; sourceTree = "<group>"; };
+		5A1CE0062F00000000A0B1C2 /* voicevox_onnxruntime.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = voicevox_onnxruntime.xcframework; path = VoiceBox/voicevox_onnxruntime.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -23,6 +47,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5A1CE0012F00000000A0B1C2 /* voicevox_core.xcframework in Frameworks */,
+				5A1CE0032F00000000A0B1C2 /* voicevox_onnxruntime.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -33,8 +59,18 @@
 			isa = PBXGroup;
 			children = (
 				057A9B283081C5CF000F7CCA /* AozoraZunda */,
+				5A1CE0082F00000000A0B1C2 /* Frameworks */,
 				057A9B273081C5CF000F7CCA /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		5A1CE0082F00000000A0B1C2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				5A1CE0052F00000000A0B1C2 /* voicevox_core.xcframework */,
+				5A1CE0062F00000000A0B1C2 /* voicevox_onnxruntime.xcframework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		057A9B273081C5CF000F7CCA /* Products */ = {
@@ -55,6 +91,7 @@
 				057A9B223081C5CF000F7CCA /* Sources */,
 				057A9B233081C5CF000F7CCA /* Frameworks */,
 				057A9B243081C5CF000F7CCA /* Resources */,
+				5A1CE0072F00000000A0B1C2 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);

@@ -10,15 +10,19 @@ struct PagedBookView: UIViewControllerRepresentable {
     let onProgress: (Double) -> Void
     let onPageTurn: () -> Void
     let onToggleChrome: () -> Void
+    /// 読み上げのときにページを読んだりめくったりできるようにする
+    let readAloud: ReadAloudController
 
     func makeUIViewController(context: Context) -> PagedBookViewController {
-        PagedBookViewController(
+        let controller = PagedBookViewController(
             document: document,
             title: book.displayTitle,
             credit: book.displayCredit,
             appearance: appearance,
             initialProgress: initialProgress
         )
+        readAloud.source = controller
+        return controller
     }
 
     func updateUIViewController(_ controller: PagedBookViewController, context: Context) {
@@ -279,6 +283,27 @@ extension PagedBookViewController: UIPageViewControllerDataSource, UIPageViewCon
         anchorLocation = nil
         onProgress?(book.progress(atPage: page.index))
         onPageTurn?()
+    }
+}
+
+extension PagedBookViewController: ReadAloudPageSource {
+    var currentPageIndex: Int { currentPage }
+    var availablePageCount: Int { hasInstalledCurrentPagination ? book?.pages.count ?? 0 : 0 }
+    var isPaginationComplete: Bool { book?.isComplete ?? false }
+
+    func speechText(atPage index: Int) -> String {
+        book?.speechText(forPage: index) ?? ""
+    }
+
+    func showPage(_ index: Int) {
+        guard let book, book.pages.indices.contains(index), index != currentPage else { return }
+        // 縦書き（右綴じ）は逆向きにめくると次のページへ進む見た目になる
+        let isForward = index > currentPage
+        let direction: UIPageViewController.NavigationDirection = isForward != book.layout.isVertical ? .forward : .reverse
+        currentPage = index
+        anchorLocation = nil
+        pageController?.setViewControllers([makePage(index)], direction: direction, animated: true)
+        onProgress?(book.progress(atPage: index))
     }
 }
 

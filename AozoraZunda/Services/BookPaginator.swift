@@ -40,6 +40,21 @@ nonisolated final class PaginatedBook: @unchecked Sendable {
         return BookPaginator.makeFrame(text, layout: layout)
     }
 
+    /// 読み上げ用のテキスト。ルビの付いた語はルビの読みに置き換える
+    func speechText(forPage index: Int) -> String {
+        let page = pages[index]
+        let text = sections[page.section].attributedSubstring(from: NSRange(location: page.range.location, length: page.range.length))
+        var result = ""
+        text.enumerateAttribute(.speechReading, in: NSRange(location: 0, length: text.length)) { reading, range, _ in
+            if let reading = reading as? String {
+                result += reading
+            } else {
+                result += (text.string as NSString).substring(with: range)
+            }
+        }
+        return result
+    }
+
     /// 文字位置を含むページ
     func pageIndex(containing location: Int) -> Int {
         var low = 0
