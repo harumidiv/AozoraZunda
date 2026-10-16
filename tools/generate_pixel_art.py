@@ -163,8 +163,8 @@ def clock():
 # MARK: - 家具
 
 
-def bookshelf(seed):
-    """本がぎっしり詰まった本棚（2x2マス）"""
+def bookshelf(seed, filled=True):
+    """本がぎっしり詰まった本棚（2x2マス）。filled=False で空の本棚（部屋で本を後から描き足す）"""
     rng = random.Random(seed)
     width, height = 32, 32
     image = new(width, height, WOOD_DARK)
@@ -178,7 +178,7 @@ def bookshelf(seed):
         bottom = top + 7
         rect(image, 2, top, width - 3, bottom, rgb(0x3A2418))
         x = 2
-        while x < width - 2:
+        while filled and x < width - 2:
             book_width = rng.choice([2, 2, 3, 3, 4])
             if x + book_width > width - 2:
                 book_width = width - 2 - x
@@ -281,18 +281,62 @@ def plant():
     return image
 
 
-def rug(width_tiles, height_tiles):
+def rug(width_tiles, height_tiles, colors=(RUG, RUG_DARK, RUG_GOLD)):
     """中央通路の絨毯"""
+    base, dark, accent = colors
     width, height = width_tiles * TILE, height_tiles * TILE
-    image = new(width, height, RUG)
-    rect(image, 0, 0, width - 1, height - 1, RUG_DARK)
-    rect(image, 2, 2, width - 3, height - 3, RUG)
-    rect(image, 4, 4, width - 5, height - 5, RUG_GOLD)
-    rect(image, 5, 5, width - 6, height - 6, RUG)
+    image = new(width, height, base)
+    rect(image, 0, 0, width - 1, height - 1, dark)
+    rect(image, 2, 2, width - 3, height - 3, base)
+    rect(image, 4, 4, width - 5, height - 5, accent)
+    rect(image, 5, 5, width - 6, height - 6, base)
     for y in range(10, height - 10, 8):
         for x in range(10 + (y // 8 % 2) * 4, width - 10, 8):
-            image.putpixel((x, y), RUG_DARK)
-            image.putpixel((x + 1, y), RUG_GOLD)
+            image.putpixel((x, y), dark)
+            image.putpixel((x + 1, y), accent)
+    return image
+
+
+# MARK: - ずんだもんの部屋
+
+ZUNDA = rgb(0x8ED65C)
+ZUNDA_DARK = rgb(0x5AA83C)
+ZUNDA_LIGHT = rgb(0xC8EE9E)
+
+
+def room_wall_upper():
+    """部屋の壁（枝豆の水玉の壁紙）"""
+    image = new(TILE, TILE, rgb(0xF3EBD2))
+    for x, y in [(3, 5), (11, 12)]:
+        rect(image, x, y, x + 1, y, ZUNDA)
+        rect(image, x - 1, y + 1, x + 2, y + 1, ZUNDA_DARK)
+    rect(image, 0, 0, TILE - 1, 1, WOOD_DARK)
+    return image
+
+
+def bed():
+    """ずんだ色の掛け布団のベッド（2x3マス）"""
+    width, height = 32, 48
+    image = new(width, height)
+    # 枠とヘッドボード
+    rect(image, 0, 0, width - 1, height - 1, OUTLINE)
+    rect(image, 1, 1, width - 2, 6, WOOD)
+    rect(image, 1, 1, width - 2, 1, WOOD_HIGHLIGHT)
+    rect(image, 1, 6, width - 2, 6, WOOD_DARK)
+    # シーツと枕
+    rect(image, 2, 7, width - 3, height - 5, CREAM)
+    rect(image, 6, 9, width - 7, 15, WHITE)
+    rect(image, 6, 15, width - 7, 15, CREAM_DARK)
+    # 掛け布団（枝豆の模様）
+    rect(image, 2, 19, width - 3, height - 5, ZUNDA)
+    rect(image, 2, 19, width - 3, 21, ZUNDA_LIGHT)
+    rect(image, 2, 22, width - 3, 22, ZUNDA_DARK)
+    for x, y in [(7, 27), (19, 31), (10, 37), (22, 40)]:
+        rect(image, x, y, x + 3, y, ZUNDA_DARK)
+        rect(image, x + 1, y - 1, x + 2, y - 1, ZUNDA_LIGHT)
+    # 足元の板
+    rect(image, 1, height - 4, width - 2, height - 2, WOOD)
+    rect(image, 1, height - 4, width - 2, height - 4, WOOD_LIGHT)
     return image
 
 
@@ -565,12 +609,16 @@ def build_sprites():
         "chair": chair(),
         "plant": plant(),
         "rug": rug(4, 7),
+        "room_rug": rug(3, 2, (ZUNDA, ZUNDA_DARK, ZUNDA_LIGHT)),
+        "room_wall_upper": room_wall_upper(),
+        "bed": bed(),
         "doormat": doormat(),
         "bubble": bubble(),
         "shadow": shadow(),
     }
     for index in range(4):
         sprites[f"bookshelf_{index}"] = bookshelf(seed=index * 17 + 3)
+    sprites["bookshelf_empty"] = bookshelf(seed=0, filled=False)
     for index, label in enumerate(SHELF_LABELS):
         sprites[f"sign_{index}"] = sign(label)
     sprites.update(player_frames())

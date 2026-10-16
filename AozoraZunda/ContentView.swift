@@ -8,13 +8,21 @@
 import SwiftUI
 
 struct ContentView: View {
+    private enum AppTab {
+        case room, library
+    }
+
+    @State private var tab = AppTab.room
+
     var body: some View {
-        TabView {
-            Tab("本棚", systemImage: "books.vertical") {
-                LibraryView()
+        TabView(selection: $tab) {
+            Tab("本棚", systemImage: "books.vertical", value: .room) {
+                // 部屋のドアから図書館へ出かけられる
+                LibraryView { tab = .library }
             }
-            Tab("としょかん", systemImage: "building.columns") {
-                CatalogView()
+            Tab("としょかん", systemImage: "building.columns", value: .library) {
+                // 図書館の入口から部屋へ帰れる
+                CatalogView { tab = .room }
             }
         }
     }

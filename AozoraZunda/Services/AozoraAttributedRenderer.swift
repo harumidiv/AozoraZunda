@@ -120,6 +120,8 @@ nonisolated private struct Context {
                 return
             }
             output.addAttribute(.ctRuby, value: ruby(reading, color: attributes[.ctForegroundColor]), range: range)
+            // 傍点もルビとして描くので、読み上げで使う本当の読みは別の属性に持たせる
+            output.addAttribute(.speechReading, value: reading, range: range)
 
         case .styled(let style, let children):
             var styledAttributes = attributes
@@ -248,4 +250,6 @@ nonisolated extension NSAttributedString.Key {
     static let ctRuby = NSAttributedString.Key(kCTRubyAnnotationAttributeName as String)
     static let ctUnderlineStyle = NSAttributedString.Key(kCTUnderlineStyleAttributeName as String)
     static let ctBaselineOffset = NSAttributedString.Key(kCTBaselineOffsetAttributeName as String)
+    /// ルビの読み（読み上げのときに親文字の代わりに読む）
+    static let speechReading = NSAttributedString.Key("AozoraSpeechReading")
 }

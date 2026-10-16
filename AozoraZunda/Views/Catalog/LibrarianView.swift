@@ -121,20 +121,20 @@ struct LibrarianView: View {
         }
     }
 
-    private var choices: [Choice] {
-        let anotherWord = Choice("ほかの言葉でさがす") { go(.ask(kind)) }
-        let enough = Choice("もういい") { dismiss() }
+    private var choices: [GameChoice] {
+        let anotherWord = GameChoice("ほかの言葉でさがす") { go(.ask(kind)) }
+        let enough = GameChoice("もういい") { dismiss() }
         switch step {
         case .greeting:
             return [
-                Choice("題名でさがす") { go(.ask(.title)) },
-                Choice("作家でさがす") { go(.ask(.author)) },
-                Choice("おまかせで1冊") { recommend() },
-                Choice("目録を新しくして") { refresh() },
-                Choice("なんでもない") { dismiss() },
+                GameChoice("題名でさがす") { go(.ask(.title)) },
+                GameChoice("作家でさがす") { go(.ask(.author)) },
+                GameChoice("おまかせで1冊") { recommend() },
+                GameChoice("目録を新しくして") { refresh() },
+                GameChoice("なんでもない") { dismiss() },
             ]
         case .ask:
-            return [Choice("やっぱりいい") { go(.greeting) }]
+            return [GameChoice("やっぱりいい") { go(.greeting) }]
         case .titles:
             if let selectedBook {
                 return bookChoices(for: selectedBook) + [anotherWord, enough]
@@ -142,30 +142,30 @@ struct LibrarianView: View {
             return [anotherWord, enough]
         case .authors(_, let authors):
             return authors.prefix(Self.maxAuthorChoices).map { author in
-                Choice(author.name) { go(.author(author)) }
+                GameChoice(author.name) { go(.author(author)) }
             } + [anotherWord]
         case .author(let author):
             let label = catalog.shelfLabel(ofAuthor: author.id) ?? "他"
             return [
-                Choice("案内してもらう", route: ShelfRoute(label: label, authorID: author.id)),
-                Choice("ほかの作家をさがす") { go(.ask(.author)) },
+                GameChoice("案内してもらう", route: ShelfRoute(label: label, authorID: author.id)),
+                GameChoice("ほかの作家をさがす") { go(.ask(.author)) },
                 enough,
             ]
         case .notFound:
-            return [anotherWord, Choice("おまかせで1冊") { recommend() }, enough]
+            return [anotherWord, GameChoice("おまかせで1冊") { recommend() }, enough]
         case .recommend(let book):
-            return bookChoices(for: book) + [Choice("ほかのにする") { recommend() }, enough]
+            return bookChoices(for: book) + [GameChoice("ほかのにする") { recommend() }, enough]
         case .refreshing:
             return []
         case .refreshed:
-            return [Choice("ほかにも用がある") { go(.greeting) }, enough]
+            return [GameChoice("ほかにも用がある") { go(.greeting) }, enough]
         }
     }
 
-    private func bookChoices(for book: CatalogBook) -> [Choice] {
+    private func bookChoices(for book: CatalogBook) -> [GameChoice] {
         [
-            Choice("よむ", isEnabled: !library.isDownloading(book.id)) { read(book) },
-            Choice("しらべる", book: book),
+            GameChoice("よむ", isEnabled: !library.isDownloading(book.id)) { read(book) },
+            GameChoice("しらべる", book: book),
         ]
     }
 
@@ -206,7 +206,7 @@ struct LibrarianView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     // 同姓同名の作家もいるので並び順で区別する
                     ForEach(Array(choices.enumerated()), id: \.offset) { _, choice in
-                        ChoiceView(choice: choice)
+                        GameChoiceView(choice: choice)
                     }
                 }
                 .transition(.opacity)
@@ -219,16 +219,7 @@ struct LibrarianView: View {
             typedLine = line
             typedCount = line.count
         }
-        .overlay(alignment: .topLeading) {
-            Text("司書さん")
-                .font(.system(.caption, design: .rounded, weight: .bold))
-                .foregroundStyle(ShelfPalette.highlight)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 3)
-                .background(Color(red: 0.12, green: 0.14, blue: 0.28), in: RoundedRectangle(cornerRadius: 4))
-                .overlay(RoundedRectangle(cornerRadius: 4).inset(by: 1).stroke(.white, lineWidth: 2))
-                .offset(x: 10, y: -14)
-        }
+        .speakerName("司書さん")
         .animation(.easeOut(duration: 0.15), value: isTyping)
     }
 
@@ -330,61 +321,6 @@ struct LibrarianView: View {
     }
 }
 
-// MARK: - 選択肢
-
-private struct Choice {
-    enum Kind {
-        case action(() -> Void)
-        case route(ShelfRoute)
-        case book(CatalogBook)
-    }
-
-    let title: String
-    let kind: Kind
-    var isEnabled = true
-
-    init(_ title: String, isEnabled: Bool = true, action: @escaping () -> Void) {
-        self.title = title
-        self.kind = .action(action)
-        self.isEnabled = isEnabled
-    }
-
-    init(_ title: String, route: ShelfRoute) {
-        self.title = title
-        self.kind = .route(route)
-    }
-
-    init(_ title: String, book: CatalogBook) {
-        self.title = title
-        self.kind = .book(book)
-    }
-}
-
-private struct ChoiceView: View {
-    let choice: Choice
-
-    var body: some View {
-        Group {
-            switch choice.kind {
-            case .action(let action):
-                WindowChoice(title: choice.title, action: action)
-            case .route(let route):
-                NavigationLink(value: route) {
-                    ChoiceLabel(title: choice.title)
-                }
-                .buttonStyle(.plain)
-            case .book(let book):
-                NavigationLink(value: book) {
-                    ChoiceLabel(title: choice.title)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .disabled(!choice.isEnabled)
-        .opacity(choice.isEnabled ? 1 : 0.5)
-    }
-}
-
 // MARK: - 背景と司書さん
 
 /// 本棚の並ぶ壁と床
@@ -463,6 +399,7 @@ private struct PixelImage: View {
 
 /// 司書さんが出してくれた本を並べる台
 private struct BookCart: View {
+    @Environment(LibraryStore.self) private var library
     let books: [CatalogBook]
     let selectedID: CatalogBook.ID?
     let select: (CatalogBook) -> Void
@@ -471,7 +408,7 @@ private struct BookCart: View {
         ScrollView(.horizontal) {
             LazyHStack(alignment: .bottom, spacing: 2) {
                 ForEach(Array(books.enumerated()), id: \.offset) { _, book in
-                    BookSpine(book: book, isSelected: book.id == selectedID) {
+                    BookSpine(book: book, isSelected: book.id == selectedID, mark: library.isDownloaded(book.id) ? .downloaded : .none) {
                         select(book)
                     }
                 }

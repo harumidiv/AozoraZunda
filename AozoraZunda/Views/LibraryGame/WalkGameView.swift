@@ -1,12 +1,17 @@
 import SpriteKit
 import SwiftUI
 
-/// キャラクターを歩かせて本をさがす図書館画面
-struct LibraryGameView: View {
-    let onInteract: (LibraryInteractable) -> Void
+/// キャラクターを歩かせて、調べられるものの前で「しらべる」ボタンを押す画面。図書館と部屋で使う
+struct WalkGameView<Interactable: WalkInteractable>: View {
+    /// 画面を作り直しても歩いた位置が戻らないよう、シーンは呼び出し元が持っておく
+    let scene: WalkScene<Interactable>
+    /// 何も調べられない場所にいるときのメッセージ
+    let idleMessage: String
+    /// false の間は移動・調べる操作を受け付けない（会話ウインドウを開いているときなど）
+    var isInputEnabled = true
+    let onInteract: (Interactable) -> Void
 
-    @State private var scene = LibraryScene()
-    @State private var focus: LibraryInteractable?
+    @State private var focus: Interactable?
     @State private var joystick: JoystickState?
     @State private var pressedKeys: Set<KeyEquivalent> = []
     @FocusState private var hasKeyboardFocus: Bool
@@ -16,26 +21,37 @@ struct LibraryGameView: View {
         var knob: CGPoint
     }
 
-    private static let joystickRadius: CGFloat = 48
+    private static var joystickRadius: CGFloat { 48 }
 
     var body: some View {
         ZStack {
             SpriteView(scene: scene, preferredFramesPerSecond: 60)
                 .ignoresSafeArea()
+                .background {
+                    // マップの下端がタブバーに隠れないよう、隠れる高さをシーンに伝える
+                    GeometryReader { geometry in
+                        Color.clear.onChange(of: geometry.safeAreaInsets.bottom, initial: true) { _, inset in
+                            scene.bottomInset = inset
+                        }
+                    }
+                }
 
             joystickLayer
+                .allowsHitTesting(isInputEnabled)
 
             VStack {
-                MessageWindow(text: focus?.prompt ?? "画面をドラッグして歩こう。本棚や司書さんの前で「しらべる」")
+                MessageWindow(text: focus?.prompt ?? idleMessage)
                     .padding(.horizontal)
                     .padding(.top, 8)
                     .allowsHitTesting(false)
                 Spacer()
                 HStack {
                     Spacer()
-                    ActionButton(title: focus == .librarian ? "はなす" : "しらべる", isEnabled: focus != nil) {
+                    ActionButton(title: focus?.actionTitle ?? "しらべる", isEnabled: focus != nil) {
                         if let focus { interact(with: focus) }
                     }
+                    .opacity(isInputEnabled ? 1 : 0)
+                    .allowsHitTesting(isInputEnabled)
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 16)
@@ -104,7 +120,7 @@ struct LibraryGameView: View {
             }
     }
 
-    private func interact(with interactable: LibraryInteractable) {
+    private func interact(with interactable: Interactable) {
         joystick = nil
         scene.moveInput = .zero
         onInteract(interactable)
@@ -112,6 +128,11 @@ struct LibraryGameView: View {
 
     /// ハードウェアキーボード（iPad・Mac・シミュレータ）でも操作できるようにする
     private func handleKey(_ press: KeyPress) -> KeyPress.Result {
+        guard isInputEnabled else {
+            pressedKeys = []
+            scene.moveInput = .zero
+            return .ignored
+        }
         let arrows: [KeyEquivalent] = [.upArrow, .downArrow, .leftArrow, .rightArrow]
         if arrows.contains(press.key) {
             if press.phase == .up {
@@ -143,19 +164,6 @@ private struct MessageWindow: View {
         Text(text)
             .gameWindowStyle()
             .animation(.easeOut(duration: 0.15), value: text)
-    }
-}
-
-extension View {
-    /// 紺地に白枠の RPG 風ウインドウの見た目にする
-    func gameWindowStyle() -> some View {
-        font(.system(.subheadline, design: .rounded, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(Color(red: 0.12, green: 0.14, blue: 0.28).opacity(0.92), in: RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6).inset(by: 2).stroke(.white, lineWidth: 2))
     }
 }
 
