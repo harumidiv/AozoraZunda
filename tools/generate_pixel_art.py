@@ -356,15 +356,18 @@ def shadow():
 
 PLAYER_PALETTE = {
     "k": OUTLINE,
-    "h": rgb(0x6FBF5A),  # ずんだ色の髪
-    "H": rgb(0xA6E07F),
+    "h": rgb(0x9BD66E),  # ずんだ色の髪
+    "H": rgb(0xC8EE9E),
+    "m": rgb(0x5AA83C),  # 頭の枝豆
+    "M": rgb(0x8ED65C),
     "s": rgb(0xF7D3B5),
     "e": rgb(0x2B2B3A),
     "p": rgb(0xF2A0A0),
-    "g": rgb(0xF4F0E4),  # 生成りのパーカー
-    "G": rgb(0xCFC6AE),
-    "b": rgb(0x4A5A8A),
-    "B": rgb(0x34406A),
+    "g": rgb(0xFAFAF4),  # 白い服
+    "G": rgb(0xD6DCC8),
+    "v": rgb(0x6FBF5A),  # 襟と帯
+    "b": rgb(0x3F6E36),
+    "B": rgb(0x2E5228),
     "w": WHITE,
 }
 
@@ -438,6 +441,63 @@ BODY_SIDE = [
     "....kGgggGGk....",
 ]
 
+# プレイヤー（ずんだもん風）: 頭の両脇に枝豆、白い服に緑の襟と帯
+ZUNDA_HEAD_DOWN = [
+    "................",
+    ".kk..kkkkkk..kk.",
+    "kMmkkhhhhhhkkmMk",
+    "kmMkhHHhhhhhkMmk",
+    ".kmkhhhhhhhhkmk.",
+    "..kkhhsssshhkk..",
+    "...kswesswesk...",
+    "...kseesseesk...",
+    "...kpsskssspk...",
+    "....kssssssk....",
+]
+ZUNDA_HEAD_UP = [
+    "................",
+    ".kk..kkkkkk..kk.",
+    "kMmkkhhhhhhkkmMk",
+    "kmMkhhhhhhHhkMmk",
+    ".kmkhhhhhhhhkmk.",
+    "..kkhhhhhhhhkk..",
+    "...khhhhhhhhk...",
+    "...khhHhhhhhk...",
+    "...khhhhhhhhk...",
+    "....kkhhhhkk....",
+]
+ZUNDA_HEAD_SIDE = [
+    "................",
+    ".kk..kkkkkk.....",
+    "kMmkkhhhhhhk....",
+    "kmMkhhhhHHhhk...",
+    ".kmkhhhhhhhhk...",
+    "..kkhhhhssssk...",
+    "...khhhsssesk...",
+    "...khhhssssek...",
+    "...khhsssspsk...",
+    "....kkssssskk...",
+]
+
+ZUNDA_BODY_FRONT = [
+    "....kgvvvvgk....",
+    "...kgGgvvgGgk...",
+    "..ksggggggggsk..",
+    "...kvvvvvvvvk...",
+]
+ZUNDA_BODY_BACK = [
+    "....kvvvvvvk....",
+    "...kgggggggGk...",
+    "..ksggggggggsk..",
+    "...kvvvvvvvvk...",
+]
+ZUNDA_BODY_SIDE = [
+    "....kggvvvgk....",
+    "....kggggGgk....",
+    "....kgggggsk....",
+    "....kvvvvvvk....",
+]
+
 LEGS_FRONT = {
     "stand": ["...kkbbbbbbkk...", "....kbbkkbbk....", "....kkk..kkk...."],
     "step1": ["...kkbbbbbbkk...", "....kbbkkbbk....", "....kkk...kk...."],
@@ -460,15 +520,15 @@ def character_frame(head, body, legs, palette, bob=0):
     return from_ascii(rows, palette)
 
 
-def character_frames(palette, prefix):
+def player_frames():
     frames = {}
     for name, legs in LEGS_FRONT.items():
         bob = 1 if name != "stand" else 0
-        frames[f"{prefix}_down_{name}"] = character_frame(HEAD_DOWN, BODY_FRONT, legs, palette, bob)
-        frames[f"{prefix}_up_{name}"] = character_frame(HEAD_UP, BODY_BACK, legs, palette, bob)
+        frames[f"player_down_{name}"] = character_frame(ZUNDA_HEAD_DOWN, ZUNDA_BODY_FRONT, legs, PLAYER_PALETTE, bob)
+        frames[f"player_up_{name}"] = character_frame(ZUNDA_HEAD_UP, ZUNDA_BODY_BACK, legs, PLAYER_PALETTE, bob)
     for name, legs in LEGS_SIDE.items():
         bob = 1 if name == "step1" else 0
-        frames[f"{prefix}_side_{name}"] = character_frame(HEAD_SIDE, BODY_SIDE, legs, palette, bob)
+        frames[f"player_side_{name}"] = character_frame(ZUNDA_HEAD_SIDE, ZUNDA_BODY_SIDE, legs, PLAYER_PALETTE, bob)
     return frames
 
 
@@ -513,7 +573,7 @@ def build_sprites():
         sprites[f"bookshelf_{index}"] = bookshelf(seed=index * 17 + 3)
     for index, label in enumerate(SHELF_LABELS):
         sprites[f"sign_{index}"] = sign(label)
-    sprites.update(character_frames(PLAYER_PALETTE, "player"))
+    sprites.update(player_frames())
     sprites.update(librarian_frames())
     return sprites
 
