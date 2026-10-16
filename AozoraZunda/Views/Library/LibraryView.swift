@@ -11,7 +11,7 @@ struct LibraryView: View {
                     ContentUnavailableView(
                         "本棚は空です",
                         systemImage: "books.vertical",
-                        description: Text("「さがす」から読みたい作品をダウンロードしましょう")
+                        description: Text("「としょかん」で読みたい作品をさがしてダウンロードしましょう")
                     )
                 } else {
                     List {

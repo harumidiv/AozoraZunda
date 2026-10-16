@@ -13,7 +13,7 @@ struct ContentView: View {
             Tab("本棚", systemImage: "books.vertical") {
                 LibraryView()
             }
-            Tab("さがす", systemImage: "magnifyingglass", role: .search) {
+            Tab("としょかん", systemImage: "building.columns") {
                 CatalogView()
             }
         }
