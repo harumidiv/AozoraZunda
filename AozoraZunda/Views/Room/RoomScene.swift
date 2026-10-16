@@ -1,15 +1,18 @@
 import SpriteKit
+import SwiftUI
 
 /// ずんだもんの部屋で調べられるもの
 enum RoomInteractable: WalkInteractable {
-    case shelf
+    case shelf(bookCount: Int)
     case desk
     case bed
     case door
 
     var prompt: String {
         switch self {
-        case .shelf: "ずんだもんの本棚 ── 図書館で借りてきた本が並んでいるのだ"
+        case .shelf(0): "ずんだもんの本棚 ── からっぽなのだ…図書館で借りてくるのだ"
+        case .shelf(let count) where count <= 3: "ずんだもんの本棚 ── まだ\(count)冊しかないのだ。すかすかなのだ"
+        case .shelf(let count): "ずんだもんの本棚 ── \(count)冊並んでいるのだ"
         case .desk: "机 ── 読みかけの本のつづきを読むのだ"
         case .bed: "ベッド ── ふかふかなのだ"
         case .door: "ドア ── 図書館へ本を借りにいくのだ"
@@ -23,6 +26,11 @@ enum RoomInteractable: WalkInteractable {
 
 /// ずんだもんの部屋のマップ
 final class RoomScene: WalkScene<RoomInteractable> {
+    /// 本棚に並べる本（調べる前から冊数が分かるよう、1冊ずつ描く）
+    private var shelfBooks: [CatalogBook] = []
+    private let shelfBookLayer = SKNode()
+    private var shelfNode: SKSpriteNode?
+
     init() {
         super.init(columns: 12, rows: 11, playerStart: (6, 7))
     }
@@ -67,10 +75,17 @@ final class RoomScene: WalkScene<RoomInteractable> {
         place("room_rug", column: 4.5, row: 5, z: -9_500)
         place("doormat", column: 5, row: 9.4, z: -9_500)
 
-        // 本棚
-        place("bookshelf_1", column: 1.5, row: 1)
+        // 本棚（空の本棚に持っている本を描き足す）
+        let shelf = place("bookshelf_empty", column: 1.5, row: 1)
+        shelfNode = shelf
+        shelfBookLayer.zPosition = shelf.zPosition + 1
+        addToWorld(shelfBookLayer)
+        drawShelfBooks()
         addObstacle(column: 1.5, row: 2, width: 2, height: 1)
-        addZone(column: 1.25, row: 2.9, width: 2.5, height: 1.2, interactable: .shelf, anchor: (2.5, 0.4))
+        addZone(
+            column: 1.25, row: 2.9, width: 2.5, height: 1.2,
+            interactable: .shelf(bookCount: shelfBooks.count), anchor: (2.5, 0.4)
+        )
 
         // 机と椅子
         place("table", column: 8, row: 1.4)
@@ -89,5 +104,59 @@ final class RoomScene: WalkScene<RoomInteractable> {
 
         // ドア
         addZone(column: 4.5, row: 9, width: 3, height: 1.4, interactable: .door, anchor: (6, 8.3))
+    }
+
+    /// 本棚に並べる本を差し替える。シーンを表示する前に呼んでもよい
+    func showBooks(_ books: [CatalogBook]) {
+        shelfBooks = books
+        replaceInteractable(where: { if case .shelf = $0 { true } else { false } }, with: .shelf(bookCount: books.count))
+        drawShelfBooks()
+    }
+
+    /// 本棚のドット絵（32x32）の3つの段に、1冊ずつ小さな背表紙を並べる。入りきらない分は描かない
+    private func drawShelfBooks() {
+        guard let shelfNode else { return }
+        shelfBookLayer.removeAllChildren()
+        let shelfBottoms: [CGFloat] = [10, 19, 28]
+        let innerLeft: CGFloat = 2
+        let innerRight: CGFloat = 30
+        var shelf = 0
+        var x = innerLeft
+        for book in shelfBooks {
+            let seed = book.spineSeed
+            let width: CGFloat = [3, 3, 4][seed % 3]
+            let height: CGFloat = [5, 6, 6, 7][seed / 3 % 4]
+            if x + width > innerRight {
+                shelf += 1
+                x = innerLeft
+            }
+            guard shelf < shelfBottoms.count else { break }
+            let color = UIColor(ShelfPalette.spine(for: book).color)
+            let top = CGPoint(
+                x: shelfNode.position.x + x,
+                y: shelfNode.position.y - (shelfBottoms[shelf] - height + 1)
+            )
+            shelfBookLayer.addChild(pixelRect(color: color, at: top, width: width - 1, height: height))
+            // 右端を1ドット暗くして厚みを出す
+            let shade = color.darker
+            shelfBookLayer.addChild(pixelRect(color: shade, at: CGPoint(x: top.x + width - 1, y: top.y), width: 1, height: height))
+            x += width
+        }
+    }
+
+    /// 左上を基準にした、1ドット単位の四角
+    private func pixelRect(color: UIColor, at topLeft: CGPoint, width: CGFloat, height: CGFloat) -> SKSpriteNode {
+        let node = SKSpriteNode(color: color, size: CGSize(width: width, height: height))
+        node.anchorPoint = CGPoint(x: 0, y: 1)
+        node.position = topLeft
+        return node
+    }
+}
+
+private extension UIColor {
+    var darker: UIColor {
+        var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
+        getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+        return UIColor(hue: hue, saturation: saturation, brightness: brightness * 0.72, alpha: alpha)
     }
 }

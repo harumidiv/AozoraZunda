@@ -126,6 +126,17 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
         ))
     }
 
+    /// 調べられる場所の中身を差し替える（本の冊数で本棚の説明を変えるときなど）
+    func replaceInteractable(where matches: (Interactable) -> Bool, with interactable: Interactable) {
+        for index in zones.indices where matches(zones[index].interactable) {
+            zones[index].interactable = interactable
+        }
+        if let focus, matches(focus), focus != interactable {
+            self.focus = interactable
+            onFocusChange?(interactable)
+        }
+    }
+
     private func buildPlayer() {
         let shadow = SKSpriteNode(texture: Self.texture("shadow"))
         shadow.anchorPoint = CGPoint(x: 0.5, y: 0.5)

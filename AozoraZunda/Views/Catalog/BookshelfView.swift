@@ -230,6 +230,11 @@ enum ShelfPalette {
         (Color(red: 0.88, green: 0.49, blue: 0.31), .white),
         (Color(red: 0.25, green: 0.30, blue: 0.45), .white),
     ]
+
+    /// 作品の背表紙の色と文字色。どの画面でも同じ作品は同じ色になる
+    static func spine(for book: CatalogBook) -> (color: Color, ink: Color) {
+        spines[book.spineSeed % spines.count]
+    }
 }
 
 /// 棚の1段。本の下に棚板を描く
@@ -301,9 +306,8 @@ struct BookSpine: View {
     let action: () -> Void
 
     var body: some View {
-        let seed = Self.seed(of: book.id)
-        let (color, ink) = ShelfPalette.spines[seed % ShelfPalette.spines.count]
-        let height = 96 + CGFloat(seed / 7 % 6) * 6
+        let (color, ink) = ShelfPalette.spine(for: book)
+        let height = 96 + CGFloat(book.spineSeed / 7 % 6) * 6
 
         Button(action: action) {
             VerticalText(text: book.title, maxLength: Int((height - 18) / 12))
@@ -346,9 +350,11 @@ struct BookSpine: View {
         .accessibilityValue(mark.accessibilityValue)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
+}
 
-    /// 作品IDから決まる値（起動のたびに変わらないよう hashValue は使わない）
-    private static func seed(of id: String) -> Int {
+extension CatalogBook {
+    /// 背表紙の色や高さを決める、作品IDから決まる値（起動のたびに変わらないよう hashValue は使わない）
+    var spineSeed: Int {
         Int(id) ?? id.unicodeScalars.reduce(0) { $0 &* 31 &+ Int($1.value) } & .max
     }
 }

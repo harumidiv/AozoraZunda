@@ -163,8 +163,8 @@ def clock():
 # MARK: - 家具
 
 
-def bookshelf(seed):
-    """本がぎっしり詰まった本棚（2x2マス）"""
+def bookshelf(seed, filled=True):
+    """本がぎっしり詰まった本棚（2x2マス）。filled=False で空の本棚（部屋で本を後から描き足す）"""
     rng = random.Random(seed)
     width, height = 32, 32
     image = new(width, height, WOOD_DARK)
@@ -178,7 +178,7 @@ def bookshelf(seed):
         bottom = top + 7
         rect(image, 2, top, width - 3, bottom, rgb(0x3A2418))
         x = 2
-        while x < width - 2:
+        while filled and x < width - 2:
             book_width = rng.choice([2, 2, 3, 3, 4])
             if x + book_width > width - 2:
                 book_width = width - 2 - x
@@ -618,6 +618,7 @@ def build_sprites():
     }
     for index in range(4):
         sprites[f"bookshelf_{index}"] = bookshelf(seed=index * 17 + 3)
+    sprites["bookshelf_empty"] = bookshelf(seed=0, filled=False)
     for index, label in enumerate(SHELF_LABELS):
         sprites[f"sign_{index}"] = sign(label)
     sprites.update(player_frames())

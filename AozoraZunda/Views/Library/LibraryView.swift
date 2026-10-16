@@ -33,6 +33,10 @@ struct LibraryView: View {
                 }
             }
             .animation(.easeOut(duration: 0.15), value: dialog == nil)
+            .task(id: library.sortedBooks.map(\.id)) {
+                // 調べる前から冊数が分かるよう、部屋の本棚に持っている本を並べる
+                scene.showBooks(library.sortedBooks.map(\.book))
+            }
             .toolbarVisibility(.hidden, for: .navigationBar)
             .navigationTitle("へや")
             .navigationDestination(for: MyShelfRoute.self) { _ in
