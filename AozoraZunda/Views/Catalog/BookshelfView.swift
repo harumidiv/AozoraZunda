@@ -46,7 +46,9 @@ struct BookshelfView: View {
                     ScrollView {
                         LazyVStack(spacing: 0) {
                             ForEach(rows.indices, id: \.self) { index in
-                                ShelfRow(items: rows[index], selection: $selection)
+                                ShelfRow(items: rows[index], selection: $selection) { book in
+                                    library.isDownloaded(book.id) ? .downloaded : .none
+                                }
                                     .id(index)
                             }
                             Color.clear.frame(height: 24)
@@ -132,7 +134,7 @@ struct BookshelfView: View {
 
 // MARK: - 並べ方
 
-private enum ShelfItem: Identifiable {
+enum ShelfItem: Identifiable {
     case divider(CatalogAuthor)
     /// 共著の作品は複数の作家の棚に並ぶので、ID には作家も含める
     case book(CatalogBook, authorID: String)
@@ -156,7 +158,7 @@ private enum ShelfItem: Identifiable {
     }
 }
 
-private enum ShelfLayout {
+enum ShelfLayout {
     static let spineWidth: CGFloat = 26
     static let dividerWidth: CGFloat = 30
     static let spacing: CGFloat = 2
@@ -216,6 +218,7 @@ enum ShelfPalette {
     static let boardInk = Color(red: 0.24, green: 0.14, blue: 0.08)
     static let highlight = Color(red: 1.0, green: 0.90, blue: 0.50)
     static let ribbon = Color(red: 0.85, green: 0.20, blue: 0.25)
+    static let gold = Color(red: 1.0, green: 0.82, blue: 0.30)
     /// ドット絵の本棚と同じ色
     static let spines: [(Color, Color)] = [
         (Color(red: 0.72, green: 0.29, blue: 0.29), .white),
@@ -230,9 +233,11 @@ enum ShelfPalette {
 }
 
 /// 棚の1段。本の下に棚板を描く
-private struct ShelfRow: View {
+struct ShelfRow: View {
     let items: [ShelfItem]
     @Binding var selection: ShelfItem.ID?
+    /// 背表紙に付ける印
+    let mark: (CatalogBook) -> SpineMark
 
     var body: some View {
         VStack(spacing: 0) {
@@ -242,7 +247,7 @@ private struct ShelfRow: View {
                     case .divider(let author):
                         AuthorDivider(author: author)
                     case .book(let book, _):
-                        BookSpine(book: book, isSelected: selection == item.id) {
+                        BookSpine(book: book, isSelected: selection == item.id, mark: mark(book)) {
                             withAnimation(.spring(duration: 0.25)) {
                                 selection = selection == item.id ? nil : item.id
                             }
@@ -270,18 +275,35 @@ private struct ShelfRow: View {
     }
 }
 
+/// 背表紙に付ける印
+enum SpineMark {
+    case none
+    /// 挟んだしおり
+    case ribbon(String)
+    /// 背表紙に巻いた金色の帯
+    case band(String)
+
+    static let downloaded = SpineMark.ribbon("ダウンロード済み")
+
+    var accessibilityValue: String {
+        switch self {
+        case .none: ""
+        case .ribbon(let label), .band(let label): label
+        }
+    }
+}
+
 /// 作品の背表紙。色と高さは作品ごとに決まっていて毎回同じになる
 struct BookSpine: View {
-    @Environment(LibraryStore.self) private var library
     let book: CatalogBook
     let isSelected: Bool
+    var mark = SpineMark.none
     let action: () -> Void
 
     var body: some View {
         let seed = Self.seed(of: book.id)
         let (color, ink) = ShelfPalette.spines[seed % ShelfPalette.spines.count]
         let height = 96 + CGFloat(seed / 7 % 6) * 6
-        let isDownloaded = library.isDownloaded(book.id)
 
         Button(action: action) {
             VerticalText(text: book.title, maxLength: Int((height - 18) / 12))
@@ -300,12 +322,19 @@ struct BookSpine: View {
                         .strokeBorder(isSelected ? ShelfPalette.highlight : ShelfPalette.outline, lineWidth: 2)
                 }
                 .overlay(alignment: .top) {
-                    if isDownloaded {
-                        // ダウンロード済みの本にはしおりが挟まっている
+                    switch mark {
+                    case .none:
+                        EmptyView()
+                    case .ribbon:
                         Rectangle()
                             .fill(ShelfPalette.ribbon)
                             .frame(width: 5, height: 14)
                             .offset(x: 5, y: -8)
+                    case .band:
+                        Rectangle()
+                            .fill(ShelfPalette.gold)
+                            .frame(height: 4)
+                            .padding(.top, height - 24)
                     }
                 }
         }
@@ -314,7 +343,7 @@ struct BookSpine: View {
         .shadow(color: isSelected ? ShelfPalette.highlight.opacity(0.6) : .clear, radius: 6)
         .zIndex(isSelected ? 1 : 0)
         .accessibilityLabel("\(book.displayTitle)、\(book.displayCredit)")
-        .accessibilityValue(isDownloaded ? "ダウンロード済み" : "")
+        .accessibilityValue(mark.accessibilityValue)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
@@ -413,33 +442,5 @@ private struct InitialIndex: View {
         }
         .background(ShelfPalette.frame)
         .accessibilityHidden(true)
-    }
-}
-
-/// メッセージウインドウ内の選択肢
-struct WindowChoice: View {
-    let title: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ChoiceLabel(title: title)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-struct ChoiceLabel: View {
-    let title: String
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Text("▶")
-                .font(.caption2)
-                .foregroundStyle(ShelfPalette.highlight)
-            Text(title)
-        }
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
     }
 }

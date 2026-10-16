@@ -4,10 +4,11 @@ import SwiftUI
 struct CatalogView: View {
     @Environment(CatalogStore.self) private var catalog
     @State private var path = NavigationPath()
+    @State private var scene = LibraryScene()
 
     var body: some View {
         NavigationStack(path: $path) {
-            LibraryGameView { interactable in
+            WalkGameView(scene: scene, idleMessage: "画面をドラッグして歩こう。本棚や司書さんの前で「しらべる」") { interactable in
                 switch interactable {
                 case .shelf(let label):
                     path.append(ShelfRoute(label: label))
