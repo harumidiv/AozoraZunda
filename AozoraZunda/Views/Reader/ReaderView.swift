@@ -171,13 +171,13 @@ private struct ReaderSettingsView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("読み上げの声")
+                    Text("ずんだもんの声")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Picker("読み上げの声", selection: $zundaStyle) {
+                    Picker("ずんだもんの声", selection: $zundaStyle) {
                         ForEach(ZundaStyle.allCases) { style in
-                            Text("ずんだもん（\(style.label)）").tag(style)
+                            Text(style.label).tag(style)
                         }
                     }
                     .pickerStyle(.menu)
