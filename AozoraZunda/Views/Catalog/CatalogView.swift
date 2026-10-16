@@ -102,7 +102,7 @@ private struct ShelfView: View {
                 .listSectionIndexVisibility(.visible)
             }
         }
-        .navigationTitle(label == "他" ? "「他」の棚" : "「\(label)」の棚")
+        .navigationTitle("「\(label)」の棚")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

@@ -2,14 +2,14 @@ import SpriteKit
 
 /// 図書館の中で調べられるもの
 enum LibraryInteractable: Equatable {
-    /// かな行ごとの本棚（label は "あ"〜"わ", "他"）
+    /// かな行ごとの本棚（label は "あ"〜"わ"）
     case shelf(label: String)
     case librarian
 
     var prompt: String {
         switch self {
         case .shelf(let label):
-            label == "他" ? "「他」の棚 ── その他の作家の本が並んでいる" : "「\(label)」の棚 ── \(label)行の作家の本が並んでいる"
+            "「\(label)」の棚 ── \(label)行の作家の本が並んでいる"
         case .librarian:
             "司書さん ── 作品名や作家名で本をさがしてくれる"
         }
@@ -27,7 +27,7 @@ final class LibraryScene: SKScene {
     private static let tile: CGFloat = 16
     private static let columns = 24
     private static let rows = 20
-    private static let shelfLabels = ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ", "他"]
+    private static let shelfLabels = ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ"]
     private static let walkSpeed: CGFloat = 72
 
     private let world = SKNode()
@@ -145,10 +145,11 @@ final class LibraryScene: SKScene {
         place("rug", column: 10, row: 11, z: -9_500)
         place("doormat", column: 11, row: 18.2, z: -9_500)
 
-        // 本棚: 上の列に6つ、下の列に5つ（中央の通路を空ける）
-        let shelfColumns: [CGFloat] = [2, 5, 8, 14, 17, 20]
-        let shelfSlots = shelfColumns.map { (column: $0, row: CGFloat(3)) }
-            + shelfColumns.prefix(5).map { (column: $0, row: CGFloat(8)) }
+        // 本棚: 上の列に6つ、下の列に4つ（中央の通路を空ける）
+        let upperColumns: [CGFloat] = [2, 5, 8, 14, 17, 20]
+        let lowerColumns: [CGFloat] = [5, 8, 14, 17]
+        let shelfSlots = upperColumns.map { (column: $0, row: CGFloat(3)) }
+            + lowerColumns.map { (column: $0, row: CGFloat(8)) }
         for (index, slot) in shelfSlots.enumerated() {
             let shelf = place("bookshelf_\(index % 4)", column: slot.column, row: slot.row)
             let sign = place("sign_\(index)", column: slot.column + 0.56, row: slot.row - 0.45)

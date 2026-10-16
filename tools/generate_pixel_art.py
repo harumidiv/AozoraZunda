@@ -487,7 +487,7 @@ def librarian_frames():
 
 # MARK: - 出力
 
-SHELF_LABELS = ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ", "他"]
+SHELF_LABELS = ["あ", "か", "さ", "た", "な", "は", "ま", "や", "ら", "わ"]
 
 
 def build_sprites():
