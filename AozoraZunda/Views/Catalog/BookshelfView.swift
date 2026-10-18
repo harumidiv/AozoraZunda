@@ -50,6 +50,9 @@ struct BookshelfView: View {
                                     library.isDownloaded(book.id) ? .downloaded : .none
                                 }
                                     .id(index)
+                                if ShelfLayout.isAdRow(after: index) {
+                                    NativeAdShelfRow()
+                                }
                             }
                             Color.clear.frame(height: 24)
                         }
@@ -188,6 +191,14 @@ enum ShelfLayout {
             rows.append(current)
         }
         return rows
+    }
+
+    /// 広告の段を入れる間隔（本を探す邪魔にならないよう、20段に1つ）
+    static let adRowInterval = 20
+
+    /// この段のあとに広告の段を入れるか（最初は6段目のあと）
+    static func isAdRow(after index: Int) -> Bool {
+        index % adRowInterval == 5
     }
 
     /// 作家の頭文字ごとに、最初の仕切り板がある段
