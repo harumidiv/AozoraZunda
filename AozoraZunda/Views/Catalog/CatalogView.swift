@@ -10,7 +10,7 @@ struct CatalogView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            WalkGameView(scene: scene, idleMessage: "画面をドラッグして歩こう。本棚や司書さんの前で「しらべる」。下の入口から部屋に帰れる") { interactable in
+            WalkGameView(scene: scene, idleMessage: "画面をドラッグして歩こう。本棚や司書さんの前で「しらべる」。下の入口から部屋に帰れる", showsBanner: true) { interactable in
                 switch interactable {
                 case .shelf(let label):
                     path.append(ShelfRoute(label: label))

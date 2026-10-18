@@ -9,6 +9,8 @@ struct WalkGameView<Interactable: WalkInteractable>: View {
     let idleMessage: String
     /// false の間は移動・調べる操作を受け付けない（会話ウインドウを開いているときなど）
     var isInputEnabled = true
+    /// 画面の上端にバナー広告を出す（歩く操作や「しらべる」ボタンから離れた位置）
+    var showsBanner = false
     let onInteract: (Interactable) -> Void
 
     @State private var focus: Interactable?
@@ -55,6 +57,12 @@ struct WalkGameView<Interactable: WalkInteractable>: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 16)
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if showsBanner {
+                BannerAdView()
+                    .background(Color(red: 0.17, green: 0.12, blue: 0.10))
             }
         }
         .focusable()

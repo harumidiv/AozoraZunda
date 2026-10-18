@@ -28,7 +28,8 @@ struct LibraryView: View {
             WalkGameView(
                 scene: scene,
                 idleMessage: "ずんだもんの部屋なのだ。画面をドラッグして歩くのだ。下のドアから図書館へ行けるのだ",
-                isInputEnabled: dialog == nil
+                isInputEnabled: dialog == nil,
+                showsBanner: true
             ) { interactable in
                 interact(with: interactable)
             }
