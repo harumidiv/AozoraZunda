@@ -6,6 +6,12 @@ protocol WalkInteractable: Equatable {
     var prompt: String { get }
     /// 調べるボタンの文言
     var actionTitle: String { get }
+    /// true なら、ボタンを押さなくても入っただけで調べたことにする（出入口など）
+    var triggersOnEnter: Bool { get }
+}
+
+extension WalkInteractable {
+    var triggersOnEnter: Bool { false }
 }
 
 /// キャラクターを歩かせて、調べられるものの前で吹き出しを出すマップの共通部分。

@@ -47,7 +47,7 @@ struct WalkGameView<Interactable: WalkInteractable>: View {
                 Spacer()
                 HStack {
                     Spacer()
-                    ActionButton(title: focus?.actionTitle ?? "しらべる", isEnabled: focus != nil) {
+                    ActionButton(title: focus?.actionTitle ?? "しらべる", isEnabled: focus.map { !$0.triggersOnEnter } ?? false) {
                         if let focus { interact(with: focus) }
                     }
                     .opacity(isInputEnabled ? 1 : 0)
@@ -64,7 +64,13 @@ struct WalkGameView<Interactable: WalkInteractable>: View {
             handleKey(press)
         }
         .onAppear {
-            scene.onFocusChange = { focus = $0 }
+            scene.onFocusChange = { newFocus in
+                focus = newFocus
+                // 出入口は入っただけで移動する
+                if let newFocus, newFocus.triggersOnEnter {
+                    interact(with: newFocus)
+                }
+            }
             scene.isPaused = false
         }
         .task {

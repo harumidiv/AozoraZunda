@@ -22,6 +22,10 @@ enum RoomInteractable: WalkInteractable {
     var actionTitle: String {
         self == .door ? "でかける" : "しらべる"
     }
+
+    var triggersOnEnter: Bool {
+        self == .door
+    }
 }
 
 /// ずんだもんの部屋のマップ
