@@ -31,8 +31,9 @@ final class RoomScene: WalkScene<RoomInteractable> {
     private let shelfBookLayer = SKNode()
     private var shelfNode: SKSpriteNode?
 
-    init() {
-        super.init(columns: 12, rows: 11, playerStart: (6, 7))
+    /// startsAtDoor: 図書館から帰ってきたときは、ドアの少し内側から始める（着いた途端に「でかける」が出ないように）
+    init(startsAtDoor: Bool = false) {
+        super.init(columns: 12, rows: 11, playerStart: startsAtDoor ? (6, 8.3) : (6, 7))
     }
 
     override func buildMap() {

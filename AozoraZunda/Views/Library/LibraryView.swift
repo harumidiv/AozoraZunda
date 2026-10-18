@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// 本棚タブ。ずんだもんの部屋を歩いて、本棚や机を調べる
+/// ずんだもんの部屋。歩いて本棚や机を調べ、ドアから図書館へ出かける
 struct LibraryView: View {
     @Environment(LibraryStore.self) private var library
-    /// 「としょかん」タブへ移る
+    /// 図書館へ出かける
     let goToLibrary: () -> Void
 
     @State private var path = NavigationPath()
-    @State private var scene = RoomScene()
+    @State private var scene: RoomScene
     @State private var dialog: RoomDialog?
 
     private static let bedLines = [
@@ -17,11 +17,17 @@ struct LibraryView: View {
         "まくらの下に読みかけの本をかくしているのは、ないしょなのだ",
     ]
 
+    /// startsAtDoor: 図書館から帰ってきたときはドアの前から始める
+    init(startsAtDoor: Bool = false, goToLibrary: @escaping () -> Void) {
+        self.goToLibrary = goToLibrary
+        _scene = State(initialValue: RoomScene(startsAtDoor: startsAtDoor))
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
             WalkGameView(
                 scene: scene,
-                idleMessage: "ずんだもんの部屋なのだ。画面をドラッグして歩くのだ",
+                idleMessage: "ずんだもんの部屋なのだ。画面をドラッグして歩くのだ。下のドアから図書館へ行けるのだ",
                 isInputEnabled: dialog == nil
             ) { interactable in
                 interact(with: interactable)

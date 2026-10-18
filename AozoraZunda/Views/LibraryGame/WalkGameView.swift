@@ -28,7 +28,7 @@ struct WalkGameView<Interactable: WalkInteractable>: View {
             SpriteView(scene: scene, preferredFramesPerSecond: 60)
                 .ignoresSafeArea()
                 .background {
-                    // マップの下端がタブバーに隠れないよう、隠れる高さをシーンに伝える
+                    // マップの下端がホームインジケーターなどに隠れないよう、隠れる高さをシーンに伝える
                     GeometryReader { geometry in
                         Color.clear.onChange(of: geometry.safeAreaInsets.bottom, initial: true) { _, inset in
                             scene.bottomInset = inset

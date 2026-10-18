@@ -53,7 +53,6 @@ struct ReaderView: View {
         }
         .navigationTitle(book.title)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .tabBar)
         .toolbarVisibility(isChromeHidden ? .hidden : .visible, for: .navigationBar)
         .toolbarColorScheme(theme == .dark ? .dark : .light, for: .navigationBar)
         .overlay(alignment: .bottomLeading) {

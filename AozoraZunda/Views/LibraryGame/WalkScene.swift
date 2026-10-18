@@ -16,7 +16,7 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     /// 調べられるものの前に立ったとき・離れたときに呼ばれる
     var onFocusChange: ((Interactable?) -> Void)?
     private(set) var focus: Interactable?
-    /// 画面下でタブバーなどに隠れる高さ（画面上のポイント）。マップの下端がその上に来るまでカメラを動かせる
+    /// 画面下でホームインジケーターなどに隠れる高さ（画面上のポイント）。マップの下端がその上に来るまでカメラを動かせる
     var bottomInset: CGFloat = 0
 
     static var tile: CGFloat { 16 }
