@@ -3,12 +3,12 @@ import Observation
 import UIKit
 
 extension AdConfig {
-    /// 部屋のテレビで流す動画のインタースティシャル広告。本番の広告ユニットがまだないときは nil（テレビには何も映らない）
-    static var tvInterstitialUnitID: String? {
+    /// 部屋のテレビで流す動画のインタースティシャル広告（開発中は Google のテスト用広告）
+    static var tvInterstitialUnitID: String {
         #if DEBUG
         "ca-app-pub-3940256099942544/5135589807"
         #else
-        nil
+        "ca-app-pub-8522231452310619/5081472602"
         #endif
     }
 }
@@ -24,9 +24,9 @@ final class TVAdController: NSObject, FullScreenContentDelegate {
     @ObservationIgnored private var isLoading = false
 
     func load() {
-        guard ad == nil, !isLoading, let unitID = AdConfig.tvInterstitialUnitID else { return }
+        guard ad == nil, !isLoading else { return }
         isLoading = true
-        InterstitialAd.load(with: unitID, request: Request()) { [weak self] ad, _ in
+        InterstitialAd.load(with: AdConfig.tvInterstitialUnitID, request: Request()) { [weak self] ad, _ in
             // 読み込み完了はメインスレッドで呼ばれる
             MainActor.assumeIsolated {
                 guard let self else { return }
