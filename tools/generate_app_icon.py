@@ -33,9 +33,10 @@ POD_LIGHT = rgb(0x8ED65C)
 SKIN = rgb(0xF7D3B5)
 SKIN_SHADE = rgb(0xEDBF9C)
 BLUSH = rgb(0xF2A0A0)
-EYE = rgb(0x2B2B3A)
-IRIS = rgb(0x3E6E8E)
-IRIS_LIGHT = rgb(0x6FA3C4)
+# 公式のずんだもんに合わせてオレンジ色の目
+EYE = rgb(0x4A2414)
+IRIS = rgb(0xE8822E)
+IRIS_LIGHT = rgb(0xF6B54A)
 WHITE = rgb(0xFFFFFF)
 MOUTH = rgb(0xC0504D)
 BRASS = rgb(0xD9A440)
@@ -88,8 +89,11 @@ def face(image):
     # 後ろ髪と頭
     draw.ellipse([-6, -12, 70, 56], fill=HAIR, outline=OUTLINE)
     # 枝豆の飾り（左右の上の角からはみ出させる）
-    pod(draw, [(-4, 1), (1, -4), (8, -1), (13, 5), (15, 12), (12, 16), (7, 14), (2, 9)], [(3, 2), (9, 8)])
-    pod(draw, [(67, 1), (62, -4), (55, -1), (50, 5), (48, 12), (51, 16), (56, 14), (61, 9)], [(60, 2), (54, 8)])
+    # 頭の両側から外向きに立ち上がる枝豆のさや（豆のふくらみを3つ見せる）
+    left_pod = [(15, 15), (9, 13), (4, 7), (1, 0), (2, -6), (8, -3), (13, 3), (17, 10)]
+    left_beans = [(5, -1), (9, 4), (13, 9)]
+    pod(draw, left_pod, left_beans)
+    pod(draw, [(63 - x, y) for x, y in left_pod], [(63 - x, y) for x, y in left_beans])
     # 顔（下は画面の外まで続く）
     draw.ellipse([3, 16, 60, 82], fill=SKIN, outline=OUTLINE)
     draw.ellipse([5, 60, 58, 82], fill=SKIN)
