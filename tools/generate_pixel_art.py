@@ -314,6 +314,48 @@ def room_wall_upper():
     return image
 
 
+def tv(frame):
+    """台に載ったブラウン管テレビ（2x2マス）。frame で画面の映り方を変えて、何か流れているように見せる"""
+    width, height = 32, 32
+    image = new(width, height)
+    draw = ImageDraw.Draw(image)
+    # アンテナ
+    draw.line([(15, 7), (10, 1)], fill=OUTLINE)
+    draw.line([(17, 7), (23, 1)], fill=OUTLINE)
+    image.putpixel((10, 1), rgb(0xD94A4A))
+    image.putpixel((23, 1), rgb(0xD94A4A))
+    # 本体
+    body, body_light, body_dark = rgb(0x8E8A84), rgb(0xB5B0A8), rgb(0x66625D)
+    rect(image, 3, 7, 28, 23, OUTLINE)
+    rect(image, 4, 8, 27, 22, body)
+    rect(image, 4, 8, 27, 8, body_light)
+    rect(image, 4, 22, 27, 22, body_dark)
+    # 画面
+    screens = [
+        (rgb(0x6FC3E8), rgb(0xBDE8F7)),
+        (rgb(0x8ED65C), rgb(0xD8F3C0)),
+    ]
+    screen, glow = screens[frame % len(screens)]
+    rect(image, 6, 10, 21, 20, OUTLINE)
+    rect(image, 7, 11, 20, 19, screen)
+    for y in range(12, 19, 2):
+        rect(image, 7, y, 20, y, glow if (y // 2 + frame) % 3 == 0 else screen)
+    # 画面の中の小さな再生マーク
+    for i in range(3):
+        rect(image, 12 + i, 13 + i, 12 + i, 17 - i, WHITE)
+    # つまみ
+    for y in (12, 16):
+        rect(image, 23, y, 25, y + 2, OUTLINE)
+        image.putpixel((24, y + 1), body_light)
+    # 木の台
+    rect(image, 1, 24, 30, 29, OUTLINE)
+    rect(image, 2, 25, 29, 28, WOOD)
+    rect(image, 2, 25, 29, 25, WOOD_LIGHT)
+    rect(image, 3, 30, 4, 31, WOOD_DARK)
+    rect(image, 27, 30, 28, 31, WOOD_DARK)
+    return image
+
+
 def bed():
     """ずんだ色の掛け布団のベッド（2x3マス）"""
     width, height = 32, 48
@@ -612,6 +654,8 @@ def build_sprites():
         "room_rug": rug(3, 2, (ZUNDA, ZUNDA_DARK, ZUNDA_LIGHT)),
         "room_wall_upper": room_wall_upper(),
         "bed": bed(),
+        "tv_0": tv(0),
+        "tv_1": tv(1),
         "doormat": doormat(),
         "bubble": bubble(),
         "shadow": shadow(),

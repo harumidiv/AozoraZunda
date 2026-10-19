@@ -9,6 +9,7 @@ struct LibraryView: View {
     @State private var path = NavigationPath()
     @State private var scene: RoomScene
     @State private var dialog: RoomDialog?
+    @State private var tvAd = TVAdController()
 
     private static let bedLines = [
         "ふかふかのお布団なのだ。…でも、もう1ページだけ読むのだ",
@@ -40,6 +41,13 @@ struct LibraryView: View {
                 }
             }
             .animation(.easeOut(duration: 0.15), value: dialog == nil)
+            .onAppear {
+                // テレビの広告は先に読み込んでおく。見終わったらずんだもんがひとこと
+                tvAd.onDismiss = {
+                    dialog = RoomDialog(text: "ふむふむ…なかなかおもしろかったのだ", choices: [close])
+                }
+                tvAd.load()
+            }
             .task(id: library.sortedBooks.map(\.id)) {
                 // 調べる前から冊数が分かるよう、部屋の本棚に持っている本を並べる
                 scene.showBooks(library.sortedBooks.map(\.book))
@@ -66,6 +74,8 @@ struct LibraryView: View {
             dialog = deskDialog()
         case .bed:
             dialog = RoomDialog(text: Self.bedLines.randomElement() ?? "", choices: [close])
+        case .tv:
+            dialog = tvDialog()
         case .door:
             goToLibrary()
         }
@@ -88,6 +98,26 @@ struct LibraryView: View {
                     path.append(ReaderRoute(book: reading.book))
                 },
                 GameChoice("あとにする") { dialog = nil },
+            ]
+        )
+    }
+
+    /// テレビで流れている広告を見るか聞く。まだ読み込めていなければ何も映っていない
+    private func tvDialog() -> RoomDialog {
+        guard tvAd.isReady else {
+            tvAd.load()
+            return RoomDialog(text: "今は何も映っていないのだ…。あとでまた見てみるのだ", choices: [close])
+        }
+        return RoomDialog(
+            text: "テレビで広告が流れているのだ。内容を見てみるのだ？",
+            choices: [
+                GameChoice("みる") {
+                    dialog = nil
+                    if !tvAd.present() {
+                        dialog = RoomDialog(text: "あれ、映らなくなっちゃったのだ…", choices: [close])
+                    }
+                },
+                GameChoice("やめておく") { dialog = nil },
             ]
         )
     }
