@@ -26,6 +26,10 @@ enum LibraryInteractable: WalkInteractable {
         case .exit: "かえる"
         }
     }
+
+    var triggersOnEnter: Bool {
+        self == .exit
+    }
 }
 
 /// 図書館のマップ。キャラクターを歩かせて本棚や司書さんを調べる

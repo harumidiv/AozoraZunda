@@ -1,14 +1,15 @@
 import SwiftUI
 
-/// 本棚タブ。ずんだもんの部屋を歩いて、本棚や机を調べる
+/// ずんだもんの部屋。歩いて本棚や机を調べ、ドアから図書館へ出かける
 struct LibraryView: View {
     @Environment(LibraryStore.self) private var library
-    /// 「としょかん」タブへ移る
+    /// 図書館へ出かける
     let goToLibrary: () -> Void
 
     @State private var path = NavigationPath()
-    @State private var scene = RoomScene()
+    @State private var scene: RoomScene
     @State private var dialog: RoomDialog?
+    @State private var tvAd = TVAdController()
 
     private static let bedLines = [
         "ふかふかのお布団なのだ。…でも、もう1ページだけ読むのだ",
@@ -17,12 +18,19 @@ struct LibraryView: View {
         "まくらの下に読みかけの本をかくしているのは、ないしょなのだ",
     ]
 
+    /// startsAtDoor: 図書館から帰ってきたときはドアの前から始める
+    init(startsAtDoor: Bool = false, goToLibrary: @escaping () -> Void) {
+        self.goToLibrary = goToLibrary
+        _scene = State(initialValue: RoomScene(startsAtDoor: startsAtDoor))
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
             WalkGameView(
                 scene: scene,
-                idleMessage: "ずんだもんの部屋なのだ。画面をドラッグして歩くのだ",
-                isInputEnabled: dialog == nil
+                idleMessage: "ずんだもんの部屋なのだ。画面をドラッグして歩くのだ。下のドアから図書館へ行けるのだ",
+                isInputEnabled: dialog == nil,
+                showsBanner: true
             ) { interactable in
                 interact(with: interactable)
             }
@@ -33,6 +41,13 @@ struct LibraryView: View {
                 }
             }
             .animation(.easeOut(duration: 0.15), value: dialog == nil)
+            .onAppear {
+                // テレビの広告は先に読み込んでおく。見終わったらずんだもんがひとこと
+                tvAd.onDismiss = {
+                    dialog = RoomDialog(text: "ふむふむ…なかなかおもしろかったのだ", choices: [close])
+                }
+                tvAd.load()
+            }
             .task(id: library.sortedBooks.map(\.id)) {
                 // 調べる前から冊数が分かるよう、部屋の本棚に持っている本を並べる
                 scene.showBooks(library.sortedBooks.map(\.book))
@@ -59,6 +74,8 @@ struct LibraryView: View {
             dialog = deskDialog()
         case .bed:
             dialog = RoomDialog(text: Self.bedLines.randomElement() ?? "", choices: [close])
+        case .tv:
+            dialog = tvDialog()
         case .door:
             goToLibrary()
         }
@@ -81,6 +98,26 @@ struct LibraryView: View {
                     path.append(ReaderRoute(book: reading.book))
                 },
                 GameChoice("あとにする") { dialog = nil },
+            ]
+        )
+    }
+
+    /// テレビで流れている広告を見るか聞く。まだ読み込めていなければ何も映っていない
+    private func tvDialog() -> RoomDialog {
+        guard tvAd.isReady else {
+            tvAd.load()
+            return RoomDialog(text: "今は何も映っていないのだ…。あとでまた見てみるのだ", choices: [close])
+        }
+        return RoomDialog(
+            text: "テレビで広告が流れているのだ。内容を見てみるのだ？",
+            choices: [
+                GameChoice("みる") {
+                    dialog = nil
+                    if !tvAd.present() {
+                        dialog = RoomDialog(text: "あれ、映らなくなっちゃったのだ…", choices: [close])
+                    }
+                },
+                GameChoice("やめておく") { dialog = nil },
             ]
         )
     }

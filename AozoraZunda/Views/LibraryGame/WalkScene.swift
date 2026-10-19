@@ -6,6 +6,12 @@ protocol WalkInteractable: Equatable {
     var prompt: String { get }
     /// 調べるボタンの文言
     var actionTitle: String { get }
+    /// true なら、ボタンを押さなくても入っただけで調べたことにする（出入口など）
+    var triggersOnEnter: Bool { get }
+}
+
+extension WalkInteractable {
+    var triggersOnEnter: Bool { false }
 }
 
 /// キャラクターを歩かせて、調べられるものの前で吹き出しを出すマップの共通部分。
@@ -16,7 +22,7 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     /// 調べられるものの前に立ったとき・離れたときに呼ばれる
     var onFocusChange: ((Interactable?) -> Void)?
     private(set) var focus: Interactable?
-    /// 画面下でタブバーなどに隠れる高さ（画面上のポイント）。マップの下端がその上に来るまでカメラを動かせる
+    /// 画面下でホームインジケーターなどに隠れる高さ（画面上のポイント）。マップの下端がその上に来るまでカメラを動かせる
     var bottomInset: CGFloat = 0
 
     static var tile: CGFloat { 16 }

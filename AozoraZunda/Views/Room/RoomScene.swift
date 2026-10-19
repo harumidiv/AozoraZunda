@@ -6,6 +6,8 @@ enum RoomInteractable: WalkInteractable {
     case shelf(bookCount: Int)
     case desk
     case bed
+    /// テレビ。調べると動画広告を見るか聞かれる
+    case tv
     case door
 
     var prompt: String {
@@ -15,12 +17,21 @@ enum RoomInteractable: WalkInteractable {
         case .shelf(let count): "ずんだもんの本棚 ── \(count)冊並んでいるのだ"
         case .desk: "机 ── 読みかけの本のつづきを読むのだ"
         case .bed: "ベッド ── ふかふかなのだ"
+        case .tv: "テレビ ── 何か映っているのだ"
         case .door: "ドア ── 図書館へ本を借りにいくのだ"
         }
     }
 
     var actionTitle: String {
-        self == .door ? "でかける" : "しらべる"
+        switch self {
+        case .door: "でかける"
+        case .tv: "みる"
+        default: "しらべる"
+        }
+    }
+
+    var triggersOnEnter: Bool {
+        self == .door
     }
 }
 
@@ -31,8 +42,9 @@ final class RoomScene: WalkScene<RoomInteractable> {
     private let shelfBookLayer = SKNode()
     private var shelfNode: SKSpriteNode?
 
-    init() {
-        super.init(columns: 12, rows: 11, playerStart: (6, 7))
+    /// startsAtDoor: 図書館から帰ってきたときは、ドアの少し内側から始める（着いた途端に「でかける」が出ないように）
+    init(startsAtDoor: Bool = false) {
+        super.init(columns: 12, rows: 11, playerStart: startsAtDoor ? (6, 8.3) : (6, 7))
     }
 
     override func buildMap() {
@@ -97,6 +109,12 @@ final class RoomScene: WalkScene<RoomInteractable> {
         place("bed", column: 9, row: 5)
         addObstacle(column: 9, row: 5.6, width: 2, height: 2.4)
         addZone(column: 7.4, row: 5.4, width: 1.6, height: 2.6, interactable: .bed, anchor: (10, 4.4))
+
+        // テレビ（画面がちらちら光って、何か流れているように見せる）
+        let tv = place("tv_0", column: 1.2, row: 4.6)
+        tv.run(.repeatForever(.animate(with: [Self.texture("tv_0"), Self.texture("tv_1")], timePerFrame: 0.6)))
+        addObstacle(column: 1.2, row: 5.6, width: 2, height: 1)
+        addZone(column: 1, row: 6.5, width: 2.5, height: 1.1, interactable: .tv, anchor: (2.2, 4.2))
 
         // 観葉植物
         place("plant", column: 1, row: 7.6)

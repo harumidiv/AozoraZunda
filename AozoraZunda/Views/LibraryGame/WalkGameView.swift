@@ -9,6 +9,8 @@ struct WalkGameView<Interactable: WalkInteractable>: View {
     let idleMessage: String
     /// false の間は移動・調べる操作を受け付けない（会話ウインドウを開いているときなど）
     var isInputEnabled = true
+    /// 画面の上端にバナー広告を出す（歩く操作や「しらべる」ボタンから離れた位置）
+    var showsBanner = false
     let onInteract: (Interactable) -> Void
 
     @State private var focus: Interactable?
@@ -28,7 +30,7 @@ struct WalkGameView<Interactable: WalkInteractable>: View {
             SpriteView(scene: scene, preferredFramesPerSecond: 60)
                 .ignoresSafeArea()
                 .background {
-                    // マップの下端がタブバーに隠れないよう、隠れる高さをシーンに伝える
+                    // マップの下端がホームインジケーターなどに隠れないよう、隠れる高さをシーンに伝える
                     GeometryReader { geometry in
                         Color.clear.onChange(of: geometry.safeAreaInsets.bottom, initial: true) { _, inset in
                             scene.bottomInset = inset
@@ -47,7 +49,7 @@ struct WalkGameView<Interactable: WalkInteractable>: View {
                 Spacer()
                 HStack {
                     Spacer()
-                    ActionButton(title: focus?.actionTitle ?? "しらべる", isEnabled: focus != nil) {
+                    ActionButton(title: focus?.actionTitle ?? "しらべる", isEnabled: focus.map { !$0.triggersOnEnter } ?? false) {
                         if let focus { interact(with: focus) }
                     }
                     .opacity(isInputEnabled ? 1 : 0)
@@ -57,6 +59,12 @@ struct WalkGameView<Interactable: WalkInteractable>: View {
                 .padding(.bottom, 16)
             }
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if showsBanner {
+                BannerAdView()
+                    .background(Color(red: 0.17, green: 0.12, blue: 0.10))
+            }
+        }
         .focusable()
         .focused($hasKeyboardFocus)
         .focusEffectDisabled()
@@ -64,7 +72,13 @@ struct WalkGameView<Interactable: WalkInteractable>: View {
             handleKey(press)
         }
         .onAppear {
-            scene.onFocusChange = { focus = $0 }
+            scene.onFocusChange = { newFocus in
+                focus = newFocus
+                // 出入口は入っただけで移動する
+                if let newFocus, newFocus.triggersOnEnter {
+                    interact(with: newFocus)
+                }
+            }
             scene.isPaused = false
         }
         .task {
