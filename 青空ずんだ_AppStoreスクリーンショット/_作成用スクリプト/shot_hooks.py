@@ -89,4 +89,17 @@ edit("AozoraZunda/Views/Reader/ReaderView.swift", [
             if {SHOT} == "reader" {{ Task {{ try? await Task.sleep(for: .seconds(3)); readAloud.start(style: .normal) }} }} // DEBUG-TEMP
 """),
 ])
+# 撮影時は ATT ダイアログと広告を出さない
+edit("AozoraZunda/AozoraZundaApp.swift", [
+    ("            guard phase == .active else { return }\n",
+     f"            guard phase == .active, {SHOT} == nil else {{ return }} // DEBUG-TEMP\n"),
+])
+edit("AozoraZunda/Views/LibraryGame/WalkGameView.swift", [
+    ("            if showsBanner {\n                BannerAdView()",
+     f"            if showsBanner, {SHOT} == nil {{ // DEBUG-TEMP\n                BannerAdView()"),
+])
+edit("AozoraZunda/Views/Ads/NativeShelfAdView.swift", [
+    ("            if let ad = slot.ad {",
+     f"            if let ad = slot.ad, {SHOT} == nil {{ // DEBUG-TEMP"),
+])
 print("ok")

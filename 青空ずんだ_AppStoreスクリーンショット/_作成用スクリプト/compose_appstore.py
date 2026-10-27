@@ -1,5 +1,6 @@
 """撮影したスクリーンショットに見出しを付けて App Store 用の画像にする
-使い方: compose_appstore.py <撮影画像のフォルダ> <出力フォルダ> <iphone|ipad>
+使い方: compose_appstore.py <撮影画像のフォルダ> <出力フォルダ> <iphone|ipad|duo>
+（duo は iPhone Duo の内側ディスプレイ。外側ディスプレイは iphone で作る）
 """
 import sys
 import unicodedata
@@ -59,7 +60,7 @@ def compose(shot_path, out_path, device):
     shot_width = round(width * (0.80 if device == "iphone" else 0.84))
     shot_height = round(shot_width * height / width)
     resized = shot.resize((shot_width, shot_height), Image.LANCZOS)
-    radius = round(shot_width * (0.11 if device == "iphone" else 0.035))
+    radius = round(shot_width * {"iphone": 0.11, "ipad": 0.035, "duo": 0.08}[device])
     mask = Image.new("L", resized.size, 0)
     ImageDraw.Draw(mask).rounded_rectangle([0, 0, shot_width - 1, shot_height - 1], radius=radius, fill=255)
 
