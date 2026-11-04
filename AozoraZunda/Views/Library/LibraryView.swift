@@ -3,6 +3,8 @@ import SwiftUI
 /// ずんだもんの部屋。歩いて本棚や机を調べ、ドアから図書館へ出かける
 struct LibraryView: View {
     @Environment(LibraryStore.self) private var library
+    @Environment(CatalogStore.self) private var catalog
+    @Environment(StoryStore.self) private var story
     /// 図書館へ出かける
     let goToLibrary: () -> Void
     /// 夜まで待って、ストーリーの舞台の夜間図書室へ行く
@@ -50,6 +52,7 @@ struct LibraryView: View {
                     dialog = RoomDialog(text: "ふむふむ…なかなかおもしろかったのだ", choices: [close])
                 }
                 tvAd.load()
+                offerStoryBookIfNeeded()
             }
             .task(id: library.sortedBooks.map(\.id)) {
                 // 調べる前から冊数が分かるよう、部屋の本棚に持っている本を並べる
@@ -90,6 +93,31 @@ struct LibraryView: View {
             dialog = tvDialog()
         case .door:
             goToLibrary()
+        }
+    }
+
+    /// 第1章を終えた朝、本物の『走れメロス』を読んでみるかたずねる（一度だけ）
+    private func offerStoryBookIfNeeded() {
+        guard story.has(.chapter1Cleared), !story.has(.chapter1ReadOffered) else { return }
+        story.set(.chapter1ReadOffered)
+        dialog = RoomDialog(
+            text: "……メロスの続きが気になって、あんまり眠れなかったのだ。本物の『走れメロス』、読んでみるのだ？",
+            choices: [
+                GameChoice("よむ") {
+                    dialog = nil
+                    Task { await openMelos() }
+                },
+                GameChoice("あとにする") { dialog = nil },
+            ]
+        )
+    }
+
+    private func openMelos() async {
+        await catalog.loadIfNeeded()
+        if let melos = catalog.books.first(where: { $0.id == "001567" }) {
+            path.append(melos)
+        } else {
+            dialog = RoomDialog(text: "本が見つからなかったのだ……。図書館の司書さんに聞いてみるのだ", choices: [close])
         }
     }
 

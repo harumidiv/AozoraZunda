@@ -8,6 +8,9 @@ enum StorySpeaker {
     /// 名乗る前のおフミさんなど、まだ名前の分からない相手
     case unknown
     case child
+    case taku
+    case melos
+    case selinuntius
 
     var name: String {
         switch self {
@@ -15,6 +18,9 @@ enum StorySpeaker {
         case .fumi: "おフミさん"
         case .unknown: "？？？"
         case .child: "まいごの子"
+        case .taku: "タク"
+        case .melos: "メロス"
+        case .selinuntius: "セリヌンティウス"
         }
     }
 
@@ -25,6 +31,9 @@ enum StorySpeaker {
         case .fumi: Color(red: 0.78, green: 0.70, blue: 0.95)
         case .unknown: Color(white: 0.8)
         case .child: Color(red: 0.98, green: 0.84, blue: 0.45)
+        case .taku: Color(red: 0.62, green: 0.80, blue: 1.0)
+        case .melos: Color(red: 1.0, green: 0.62, blue: 0.50)
+        case .selinuntius: Color(red: 0.85, green: 0.78, blue: 0.62)
         }
     }
 }
@@ -56,6 +65,8 @@ struct StoryScreen: Identifiable {
         case itemGet(StoryItem)
         /// 絵本を読み聞かせる
         case pictureBook(PictureBook)
+        /// 本の一節を本のページの見た目で出す。選択肢があれば虫食いの言葉を選ぶ
+        case passage(String, [String])
     }
 
     let id = UUID()
@@ -70,6 +81,8 @@ final class StoryRunner {
     private(set) var isRunning = false
     /// 画面全体を暗転させる
     private(set) var isBlackedOut = false
+    /// 本の一節を見せるときに添える出典（「『走れメロス』太宰治」など）
+    var passageSource = ""
     private var continuation: CheckedContinuation<Int, Never>?
 
     /// イベントを始める。ほかのイベント中なら何もしない
@@ -106,6 +119,16 @@ final class StoryRunner {
 
     func readPictureBook(_ book: PictureBook) async {
         _ = await present(.pictureBook(book))
+    }
+
+    /// 本の一節を見せる
+    func quote(_ text: String) async {
+        _ = await present(.passage(text, []))
+    }
+
+    /// 虫食いの一節を見せ、選んだ言葉の番号を返す
+    func fillInBlank(_ text: String, _ options: [String]) async -> Int {
+        await present(.passage(text, options))
     }
 
     /// 画面を暗転させる・明るくする

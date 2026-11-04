@@ -67,6 +67,14 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     /// タップした場所へ歩く速さ（ドット/秒）。経路の長さから決める
     private var pathSpeed: CGFloat = 72
 
+    // MARK: Party
+
+    /// うしろをついて歩く仲間。昔の RPG の隊列のように、プレイヤーが通った道をなぞる
+    private var followers: [SKNode] = []
+    /// プレイヤーが通った地点（新しい順）
+    private var trail: [CGPoint] = []
+    private static var followerSpacing: CGFloat { 13 }
+
     private struct GridCell: Hashable {
         var x: Int
         var y: Int
@@ -102,6 +110,8 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
         addChild(world)
         buildMap()
         buildPlayer()
+        // マップを作るときに決めた仲間を、プレイヤーの位置にそろえる
+        resetTrail()
         camera = playerCamera
         playerCamera.setScale(1.0 / 3.0)
         addChild(playerCamera)
@@ -292,8 +302,84 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
 
     override func didSimulatePhysics() {
         player.zPosition = Self.depth(forBaseY: player.position.y)
+        updateFollowers()
         updateCamera()
         updateFocus()
+    }
+
+    // MARK: - Party
+
+    /// ついて歩く仲間を決める。はじめはプレイヤーと同じ場所に重ねておき、歩き出すと列になる
+    func setFollowers(_ nodes: [SKNode]) {
+        followers = nodes
+        resetTrail()
+    }
+
+    /// プレイヤーと仲間を指定のマスへ移す（場面の切り替えや、時間の巻き戻し）
+    func placePlayer(column: CGFloat, row: CGFloat) {
+        stopWalking()
+        player.position = point(column: column, row: row)
+        player.zPosition = Self.depth(forBaseY: player.position.y)
+        resetTrail()
+        updateCamera()
+    }
+
+    /// 仲間が動くたびに呼ばれる。サブクラスで向きや歩くコマを変える（止まっているときは delta が 0）
+    func followerDidMove(_ follower: SKNode, by delta: CGVector) {}
+
+    private func resetTrail() {
+        trail = [player.position]
+        for follower in followers {
+            follower.position = player.position
+            follower.zPosition = Self.depth(forBaseY: player.position.y) + 0.1
+        }
+    }
+
+    private func updateFollowers() {
+        guard !followers.isEmpty else { return }
+        let position = player.position
+        if let latest = trail.first {
+            if hypot(position.x - latest.x, position.y - latest.y) >= 1 {
+                trail.insert(position, at: 0)
+            }
+        } else {
+            trail = [position]
+        }
+        for (index, follower) in followers.enumerated() {
+            let target = pointOnTrail(atDistance: Self.followerSpacing * CGFloat(index + 1))
+            let delta = CGVector(dx: target.x - follower.position.x, dy: target.y - follower.position.y)
+            follower.position = target
+            // 前の人より少し奥に描く（同じ高さで重なったときにプレイヤーが手前に来るように）
+            follower.zPosition = Self.depth(forBaseY: target.y) - 0.1 * CGFloat(index + 1)
+            followerDidMove(follower, by: delta)
+        }
+        trimTrail(keeping: Self.followerSpacing * CGFloat(followers.count + 1))
+    }
+
+    /// 通った道を新しいほうから distance だけさかのぼった地点
+    private func pointOnTrail(atDistance distance: CGFloat) -> CGPoint {
+        var remaining = distance
+        for index in 0..<(trail.count - 1) {
+            let from = trail[index], to = trail[index + 1]
+            let length = hypot(to.x - from.x, to.y - from.y)
+            if length >= remaining, length > 0 {
+                let t = remaining / length
+                return CGPoint(x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t)
+            }
+            remaining -= length
+        }
+        return trail.last ?? player.position
+    }
+
+    private func trimTrail(keeping distance: CGFloat) {
+        var total: CGFloat = 0
+        for index in 0..<(trail.count - 1) {
+            total += hypot(trail[index + 1].x - trail[index].x, trail[index + 1].y - trail[index].y)
+            if total > distance {
+                trail.removeSubrange((index + 2)...)
+                return
+            }
+        }
     }
 
     // MARK: - Tap-to-walk

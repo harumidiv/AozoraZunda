@@ -230,7 +230,7 @@ struct PrologueEvents {
         await runner.narrate("その夜、ずんだもんは夢を見たのだ。\n小さなお星さまが、\n空へのぼっていく夢を。")
         story.set(.prologueCleared)
         await runner.chapterTitle("序章 おわり", "字を見ると眠いのだ")
-        await runner.narrate("つぎのお話「続きが気になるのだ」は、\nただいま準備中なのだ。")
+        await runner.narrate("つぎのお話「続きが気になるのだ」は、\nまた夜になったら始まるのだ。")
         leave()
     }
 }

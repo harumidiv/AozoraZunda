@@ -10,6 +10,8 @@ final class TextBlipPlayer {
         case fumi
         case unknown
         case child
+        case taku
+        case melos
         case narration
 
         /// 基本の高さ（Hz）
@@ -19,6 +21,8 @@ final class TextBlipPlayer {
             case .fumi: 784.0  // ソ（G5）
             case .unknown: 659.3  // ミ（E5）
             case .child: 1_318.5  // ミ（E6）
+            case .taku: 880.0  // ラ（A5）
+            case .melos: 587.3  // レ（D5）
             case .narration: 523.3  // ド（C5）
             }
         }
@@ -102,6 +106,8 @@ extension StorySpeaker {
         case .fumi: .fumi
         case .unknown: .unknown
         case .child: .child
+        case .taku: .taku
+        case .melos, .selinuntius: .melos
         }
     }
 }

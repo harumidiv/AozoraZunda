@@ -4,6 +4,10 @@ import SpriteKit
 enum NightLibraryInteractable: WalkInteractable {
     case fumi
     case child
+    /// 第1章のお客さん。閲覧机にいる中学生の幽霊
+    case taku
+    /// タクが落としたしおり（切符）
+    case takuBookmark
     /// 上の列の本棚（3 は右奥の「すみの棚」）
     case bookshelf(Int)
     case pictureBookShelf
@@ -17,6 +21,8 @@ enum NightLibraryInteractable: WalkInteractable {
         switch self {
         case .fumi: "おフミさん ── むかしの司書さん。透けているのだ"
         case .child: "まいごの子 ── しくしく泣いているのだ"
+        case .taku: "タク ── 閲覧机でボロボロの本を見つめているのだ"
+        case .takuBookmark: "机の下で何か光っているのだ"
         case .bookshelf(Self.cornerShelf): "すみの棚 ── 古い本がぎっしり並んでいるのだ"
         case .bookshelf: "本棚 ── むずかしそうな本がぎっしりなのだ"
         case .pictureBookShelf: "絵本の棚 ── 表紙が見えるように並んでいるのだ"
@@ -27,8 +33,8 @@ enum NightLibraryInteractable: WalkInteractable {
 
     var actionTitle: String {
         switch self {
-        case .fumi, .child: "はなす"
-        case .bookmark: "ひろう"
+        case .fumi, .child, .taku: "はなす"
+        case .bookmark, .takuBookmark: "ひろう"
         case .exit: "かえる"
         default: "しらべる"
         }
@@ -45,6 +51,8 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
     private let fumi = SKSpriteNode()
     private let child = SKSpriteNode()
     private let bookmarkSparkle = SKSpriteNode()
+    private let taku = SKSpriteNode()
+    private let takuBookmarkSparkle = SKSpriteNode()
     private var cornerShelfNode: SKSpriteNode?
 
     private static let shelfColumns: [CGFloat] = [2, 5, 10, 13]
@@ -179,6 +187,15 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
         if flags.contains(.prologueChildPassed) && !flags.contains(.prologueFoundBookmark) {
             showBookmarkSparkle()
         }
+
+        // 第1章: 閲覧机にタクがいる
+        if flags.contains(.prologueCleared) && !flags.contains(.chapter1Cleared) {
+            setUpGhost(taku, frames: ["taku_normal_0", "taku_normal_1"], at: point(column: 3, row: 7.1))
+            addZone(column: 1.5, row: 8.3, width: 3, height: 1.3, interactable: .taku, anchor: (3, 5.7))
+            if flags.contains(.chapter1AskedBookmark) && !flags.contains(.chapter1FoundBookmark) {
+                showTakuBookmarkSparkle()
+            }
+        }
     }
 
     // MARK: - 幽霊
@@ -252,18 +269,52 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
         child.removeFromParent()
     }
 
+    // MARK: - タク
+
+    /// タクのしおりが、カウンターのそばで光る
+    func showTakuBookmarkSparkle() {
+        showSparkle(takuBookmarkSparkle, at: point(column: 10.6, row: 9.4))
+        addZone(column: 9.85, row: 8.9, width: 1.5, height: 1.6, interactable: .takuBookmark, anchor: (10.6, 8.6))
+    }
+
+    func removeTakuBookmarkSparkle() {
+        removeZones { $0 == .takuBookmark }
+        takuBookmarkSparkle.removeFromParent()
+    }
+
+    func makeTakuHappy() {
+        animateGhost(taku, frames: ["taku_happy_0", "taku_happy_1"])
+    }
+
+    /// 結末を知ったタクが成仏する
+    func ascendTaku() async {
+        removeZones { $0 == .taku }
+        taku.removeAction(forKey: "float")
+        sparkleBurst(around: CGPoint(x: taku.position.x, y: taku.position.y + 8), count: 14)
+        await run(.group([
+            .moveBy(x: 0, y: 28, duration: 2.4),
+            .sequence([.wait(forDuration: 0.6), .fadeOut(withDuration: 1.8)]),
+        ]), on: taku)
+        taku.removeFromParent()
+    }
+
     // MARK: - しおり
 
-    func showBookmarkSparkle() {
+    /// 床に落ちている物のきらめき
+    private func showSparkle(_ sparkle: SKSpriteNode, at position: CGPoint) {
         let frames = (0..<3).map { Self.texture("sparkle_\($0)") }
-        bookmarkSparkle.texture = frames[0]
-        bookmarkSparkle.size = CGSize(width: 8, height: 8)
-        bookmarkSparkle.position = point(column: 3, row: 11.6)
-        bookmarkSparkle.zPosition = 9_600
-        bookmarkSparkle.run(.repeatForever(.animate(with: frames + [frames[1]], timePerFrame: 0.18)))
-        if bookmarkSparkle.parent == nil {
-            addToWorld(bookmarkSparkle)
+        sparkle.texture = frames[0]
+        sparkle.size = CGSize(width: 8, height: 8)
+        sparkle.position = position
+        sparkle.zPosition = 9_600
+        sparkle.run(.repeatForever(.animate(with: frames + [frames[1]], timePerFrame: 0.18)))
+        if sparkle.parent == nil {
+            addToWorld(sparkle)
         }
+    }
+
+    func showBookmarkSparkle() {
+        showSparkle(bookmarkSparkle, at: point(column: 3, row: 11.6))
         addZone(column: 2.25, row: 11.0, width: 1.5, height: 1.6, interactable: .bookmark, anchor: (3, 10.4))
     }
 

@@ -41,6 +41,8 @@ struct StoryOverlay: View {
             ItemGetView(item: item) { runner.proceed() }
         case .pictureBook(let book):
             PictureBookView(book: book) { runner.proceed() }
+        case .passage(let text, let options):
+            PassageView(source: runner.passageSource, text: text, options: options) { runner.proceed(choosing: $0) }
         }
     }
 }
@@ -242,6 +244,99 @@ private struct ChapterTitleView: View {
         .task {
             withAnimation(.easeIn(duration: 1.0)) { isShown = true }
         }
+    }
+}
+
+/// 本の一節を、本のページの見た目で見せる。選択肢があれば【　】に入る言葉を選ぶ
+private struct PassageView: View {
+    let source: String
+    let text: String
+    let options: [String]
+    let proceed: (Int) -> Void
+
+    @State private var isShown = false
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.55)
+                .ignoresSafeArea()
+            VStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 12) {
+                    if !source.isEmpty {
+                        Text(source)
+                            .font(.pixel(12))
+                            .foregroundStyle(Color(red: 0.55, green: 0.42, blue: 0.30))
+                    }
+                    highlightedText
+                        .font(.pixel(17))
+                        .lineSpacing(8)
+                        .foregroundStyle(Color(red: 0.24, green: 0.15, blue: 0.10))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(18)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color(red: 0.97, green: 0.93, blue: 0.82))
+                        .overlay(RoundedRectangle(cornerRadius: 4).inset(by: 2).stroke(Color(red: 0.35, green: 0.23, blue: 0.15), lineWidth: 4))
+                )
+                .overlay(alignment: .bottomTrailing) {
+                    if options.isEmpty {
+                        Text("▼")
+                            .font(.pixel(12))
+                            .foregroundStyle(Color(red: 0.35, green: 0.23, blue: 0.15))
+                            .padding(10)
+                    }
+                }
+
+                if !options.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("【　】に入る言葉は？")
+                            .font(.pixel(13))
+                            .foregroundStyle(Color(white: 0.8))
+                        ForEach(Array(options.enumerated()), id: \.offset) { index, option in
+                            Button {
+                                proceed(index)
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "arrowtriangle.right.fill")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(ShelfPalette.highlight)
+                                    Text(option)
+                                        .font(.pixel(17))
+                                        .foregroundStyle(.white)
+                                }
+                                .padding(.vertical, 6)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(16)
+                    .background(RetroWindowBackground())
+                }
+            }
+            .padding(.horizontal, 20)
+            .opacity(isShown ? 1 : 0)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if options.isEmpty { proceed(0) }
+        }
+        .task {
+            withAnimation(.easeOut(duration: 0.35)) { isShown = true }
+        }
+    }
+
+    /// 虫食いの【　】だけ色を変えて目立たせる
+    private var highlightedText: Text {
+        var result = Text("")
+        var rest = Substring(text)
+        while let open = rest.firstIndex(of: "【"), let close = rest[open...].firstIndex(of: "】") {
+            result = Text("\(result)\(Text(String(rest[..<open])))\(Text(String(rest[open...close])).foregroundStyle(Color(red: 0.75, green: 0.25, blue: 0.20)))")
+            rest = rest[rest.index(after: close)...]
+        }
+        return Text("\(result)\(Text(String(rest)))")
     }
 }
 

@@ -16,12 +16,36 @@ enum StoryFlag: String, Codable, CaseIterable {
     case prologueBookmarkShelved
     /// 序章を最後まで遊んだ
     case prologueCleared
+
+    // 第1章「続きが気になるのだ」（走れメロス）
+    /// タクと出会った
+    case chapter1Started
+    /// タクに、なくしたしおりを探すよう頼まれた
+    case chapter1AskedBookmark
+    /// タクのしおり（切符）を見つけた
+    case chapter1FoundBookmark
+    /// 本の中で濁流を泳ぎ切った
+    case chapter1RiverCrossed
+    /// 峠の山賊を切り抜けた
+    case chapter1BanditsPassed
+    /// 倒れたメロスが泉の水で立ち上がった
+    case chapter1MelosRevived
+    /// フィロストラトスに止められても走り続けた
+    case chapter1PhilostratusPassed
+    /// 刑場に間に合い、結末を見届けた
+    case chapter1ReachedEnd
+    /// 第1章を最後まで遊んだ
+    case chapter1Cleared
+    /// 部屋で本物の『走れメロス』を読むかたずねた
+    case chapter1ReadOffered
 }
 
 /// ストーリーで手に入るもちもの
 enum StoryItem: String, Codable, CaseIterable, Identifiable {
     case pictureBook
     case bookmark
+    case tatteredBook
+    case ticketBookmark
 
     var id: String { rawValue }
 
@@ -29,6 +53,8 @@ enum StoryItem: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .pictureBook: "あおい えほん"
         case .bookmark: "おしばなの しおり"
+        case .tatteredBook: "ボロボロの文庫本"
+        case .ticketBookmark: "タクの しおり"
         }
     }
 
@@ -36,6 +62,8 @@ enum StoryItem: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .pictureBook: "『ほしのこ ポロン』。表紙に小さなお星さまが描いてある絵本"
         case .bookmark: "押し花の入った古いしおり。どの本のものかは分からない"
+        case .tatteredBook: "タクの『走れメロス』。川のところから先のページが破れている"
+        case .ticketBookmark: "電車の切符。タクがしおりにしていた"
         }
     }
 
@@ -44,6 +72,8 @@ enum StoryItem: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .pictureBook: "sprite_item_picture_book"
         case .bookmark: "sprite_item_bookmark"
+        case .tatteredBook: "sprite_item_tattered_book"
+        case .ticketBookmark: "sprite_item_ticket_bookmark"
         }
     }
 }
