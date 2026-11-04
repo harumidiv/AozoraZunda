@@ -14,16 +14,8 @@ struct WalkGameView<Interactable: WalkInteractable>: View {
     let onInteract: (Interactable) -> Void
 
     @State private var focus: Interactable?
-    @State private var joystick: JoystickState?
     @State private var pressedKeys: Set<KeyEquivalent> = []
     @FocusState private var hasKeyboardFocus: Bool
-
-    private struct JoystickState {
-        var origin: CGPoint
-        var knob: CGPoint
-    }
-
-    private static var joystickRadius: CGFloat { 48 }
 
     var body: some View {
         ZStack {
@@ -38,7 +30,9 @@ struct WalkGameView<Interactable: WalkInteractable>: View {
                     }
                 }
 
-            joystickLayer
+            // SpriteView と同じ範囲に重ねて、タップ位置をそのままシーンのビュー座標として渡す
+            touchLayer
+                .ignoresSafeArea()
                 .allowsHitTesting(isInputEnabled)
 
             VStack {
@@ -88,55 +82,36 @@ struct WalkGameView<Interactable: WalkInteractable>: View {
         }
         .onDisappear {
             // 別画面に移ったときに歩き続けないよう入力をリセットする
-            joystick = nil
             pressedKeys = []
             scene.moveInput = .zero
+            scene.stopWalking()
             scene.isPaused = true
+        }
+        .onChange(of: isInputEnabled) { _, isEnabled in
+            if !isEnabled {
+                scene.stopWalking()
+            }
         }
     }
 
-    private var joystickLayer: some View {
+    /// タップした場所へ歩く。指を置いたまま動かすと、指の位置を追いかける
+    private var touchLayer: some View {
         Color.clear
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { value in
-                        let origin = joystick?.origin ?? value.startLocation
-                        var offset = CGVector(dx: value.location.x - origin.x, dy: value.location.y - origin.y)
-                        let length = hypot(offset.dx, offset.dy)
-                        if length > Self.joystickRadius {
-                            offset = CGVector(dx: offset.dx / length * Self.joystickRadius, dy: offset.dy / length * Self.joystickRadius)
-                        }
-                        joystick = JoystickState(origin: origin, knob: CGPoint(x: origin.x + offset.dx, y: origin.y + offset.dy))
-                        // SwiftUI は下向きが正、SpriteKit は上向きが正
-                        scene.moveInput = CGVector(dx: offset.dx / Self.joystickRadius, dy: -offset.dy / Self.joystickRadius)
+                        scene.touchPoint = value.location
                     }
                     .onEnded { _ in
-                        joystick = nil
-                        scene.moveInput = .zero
+                        scene.touchPoint = nil
                     }
             )
-            .overlay {
-                if let joystick {
-                    ZStack {
-                        Circle()
-                            .fill(.black.opacity(0.18))
-                            .stroke(.white.opacity(0.6), lineWidth: 2)
-                            .frame(width: Self.joystickRadius * 2, height: Self.joystickRadius * 2)
-                            .position(joystick.origin)
-                        Circle()
-                            .fill(.white.opacity(0.85))
-                            .frame(width: 40, height: 40)
-                            .position(joystick.knob)
-                    }
-                    .allowsHitTesting(false)
-                }
-            }
     }
 
     private func interact(with interactable: Interactable) {
-        joystick = nil
         scene.moveInput = .zero
+        scene.stopWalking()
         onInteract(interactable)
     }
 

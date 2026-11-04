@@ -28,7 +28,7 @@ struct LibraryView: View {
         NavigationStack(path: $path) {
             WalkGameView(
                 scene: scene,
-                idleMessage: "ずんだもんの部屋なのだ。画面をドラッグして歩くのだ。下のドアから図書館へ行けるのだ",
+                idleMessage: "ずんだもんの部屋なのだ。行きたい場所をタップすると歩くのだ。下のドアから図書館へ行けるのだ",
                 isInputEnabled: dialog == nil,
                 showsBanner: true
             ) { interactable in
