@@ -344,7 +344,7 @@ struct Chapter1Events {
         await runner.narrate("……結末は知っているのに、\n続きが気になって、眠れなかったのだ。")
         story.set(.chapter1Cleared)
         await runner.chapterTitle("第1章 おわり", "続きが気になるのだ")
-        await runner.narrate("つぎのお話「書き込みは、その人の足あとなのだ」は、\nただいま準備中なのだ。")
+        await runner.narrate("つぎのお話「書き込みは、その人の足あとなのだ」は、\nまた夜になったら始まるのだ。")
         leave()
     }
 }

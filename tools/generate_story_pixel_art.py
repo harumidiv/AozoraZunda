@@ -15,6 +15,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 from story_chapter1_art import chapter1_sprites
+from story_chapter2_art import chapter2_sprites
+from story_chapter3_art import chapter3_sprites
 from generate_pixel_art import (
     CREAM,
     CREAM_DARK,
@@ -519,6 +521,8 @@ def build_sprites():
     for scene in ["sky", "fall", "song", "home"]:
         sprites[f"book_{scene}"] = book_picture(scene)
     sprites.update(chapter1_sprites())
+    sprites.update(chapter2_sprites())
+    sprites.update(chapter3_sprites())
     return sprites
 
 

@@ -8,6 +8,10 @@ enum NightLibraryInteractable: WalkInteractable {
     case taku
     /// タクが落としたしおり（切符）
     case takuBookmark
+    /// 第2章のお客さん。閲覧机にいる猫の幽霊
+    case tama
+    /// 第3章のお客さん。手紙を持った少女の幽霊
+    case sachi
     /// 上の列の本棚（3 は右奥の「すみの棚」）
     case bookshelf(Int)
     case pictureBookShelf
@@ -23,6 +27,8 @@ enum NightLibraryInteractable: WalkInteractable {
         case .child: "まいごの子 ── しくしく泣いているのだ"
         case .taku: "タク ── 閲覧机でボロボロの本を見つめているのだ"
         case .takuBookmark: "机の下で何か光っているのだ"
+        case .tama: "タマ ── 閲覧机の上でまるくなっている、猫の幽霊なのだ"
+        case .sachi: "サチ ── 封筒をぎゅっと胸にかかえているのだ"
         case .bookshelf(Self.cornerShelf): "すみの棚 ── 古い本がぎっしり並んでいるのだ"
         case .bookshelf: "本棚 ── むずかしそうな本がぎっしりなのだ"
         case .pictureBookShelf: "絵本の棚 ── 表紙が見えるように並んでいるのだ"
@@ -33,7 +39,7 @@ enum NightLibraryInteractable: WalkInteractable {
 
     var actionTitle: String {
         switch self {
-        case .fumi, .child, .taku: "はなす"
+        case .fumi, .child, .taku, .tama, .sachi: "はなす"
         case .bookmark, .takuBookmark: "ひろう"
         case .exit: "かえる"
         default: "しらべる"
@@ -53,6 +59,8 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
     private let bookmarkSparkle = SKSpriteNode()
     private let taku = SKSpriteNode()
     private let takuBookmarkSparkle = SKSpriteNode()
+    private let tama = SKSpriteNode()
+    private let sachi = SKSpriteNode()
     private var cornerShelfNode: SKSpriteNode?
 
     private static let shelfColumns: [CGFloat] = [2, 5, 10, 13]
@@ -196,6 +204,19 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
                 showTakuBookmarkSparkle()
             }
         }
+
+        // 第2章: 閲覧机の上に猫の幽霊タマがいる
+        if flags.contains(.chapter1Cleared) && !flags.contains(.chapter2TamaPassed) {
+            setUpGhost(tama, frames: ["tama_0", "tama_1"], at: point(column: 3, row: 7.4))
+            addZone(column: 1.5, row: 8.3, width: 3, height: 1.3, interactable: .tama, anchor: (3, 6.0))
+        }
+
+        // 第3章: 閲覧机に、手紙を持った少女の幽霊サチがいる
+        if flags.contains(.chapter2Cleared) && !flags.contains(.chapter3SachiPassed) {
+            let frames = flags.contains(.chapter3LetterDelivered) ? ["sachi_happy_0", "sachi_happy_1"] : ["sachi_normal_0", "sachi_normal_1"]
+            setUpGhost(sachi, frames: frames, at: point(column: 3, row: 7.1))
+            addZone(column: 1.5, row: 8.3, width: 3, height: 1.3, interactable: .sachi, anchor: (3, 5.7))
+        }
     }
 
     // MARK: - 幽霊
@@ -296,6 +317,38 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
             .sequence([.wait(forDuration: 0.6), .fadeOut(withDuration: 1.8)]),
         ]), on: taku)
         taku.removeFromParent()
+    }
+
+    // MARK: - タマ
+
+    /// ずんだもんの読み聞かせを聞いたタマが成仏する
+    func ascendTama() async {
+        removeZones { $0 == .tama }
+        tama.removeAction(forKey: "float")
+        sparkleBurst(around: CGPoint(x: tama.position.x, y: tama.position.y + 8), count: 14)
+        await run(.group([
+            .moveBy(x: 0, y: 28, duration: 2.4),
+            .sequence([.wait(forDuration: 0.6), .fadeOut(withDuration: 1.8)]),
+        ]), on: tama)
+        tama.removeFromParent()
+    }
+
+    // MARK: - サチ
+
+    func makeSachiHappy() {
+        animateGhost(sachi, frames: ["sachi_happy_0", "sachi_happy_1"])
+    }
+
+    /// 手紙を届けたサチが成仏する
+    func ascendSachi() async {
+        removeZones { $0 == .sachi }
+        sachi.removeAction(forKey: "float")
+        sparkleBurst(around: CGPoint(x: sachi.position.x, y: sachi.position.y + 8), count: 14)
+        await run(.group([
+            .moveBy(x: 0, y: 28, duration: 2.4),
+            .sequence([.wait(forDuration: 0.6), .fadeOut(withDuration: 1.8)]),
+        ]), on: sachi)
+        sachi.removeFromParent()
     }
 
     // MARK: - しおり

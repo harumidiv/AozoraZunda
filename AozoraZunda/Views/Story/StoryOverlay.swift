@@ -43,6 +43,8 @@ struct StoryOverlay: View {
             PictureBookView(book: book) { runner.proceed() }
         case .passage(let text, let options):
             PassageView(source: runner.passageSource, text: text, options: options) { runner.proceed(choosing: $0) }
+        case .handwriting(let notes):
+            HandwritingView(notes: notes) { runner.proceed() }
         }
     }
 }
@@ -337,6 +339,68 @@ private struct PassageView: View {
             rest = rest[rest.index(after: close)...]
         }
         return Text("\(result)\(Text(String(rest)))")
+    }
+}
+
+/// 本の余白に残された鉛筆の書き込み。罫線の入った紙に、少し傾けて書いたように見せる
+private struct HandwritingView: View {
+    let notes: [HandwrittenNote]
+    let proceed: () -> Void
+    @State private var shownCount = 0
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.55)
+                .ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 14) {
+                Text("── 余白の書き込み ──")
+                    .font(.pixel(12))
+                    .foregroundStyle(Color(red: 0.55, green: 0.42, blue: 0.30))
+                    .frame(maxWidth: .infinity)
+                ForEach(Array(notes.enumerated()), id: \.offset) { index, note in
+                    Text(note.text)
+                        .font(.pixel(16))
+                        .lineSpacing(8)
+                        .foregroundStyle(note.isOtherHand ? Color(red: 0.16, green: 0.24, blue: 0.52) : Color(red: 0.38, green: 0.38, blue: 0.44))
+                        .rotationEffect(.degrees(note.isOtherHand ? 1.2 : -1.5))
+                        .frame(maxWidth: .infinity, alignment: note.isOtherHand ? .trailing : .leading)
+                        .opacity(index < shownCount ? 1 : 0)
+                }
+            }
+            .padding(20)
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: 3).fill(Color(red: 0.98, green: 0.95, blue: 0.86))
+                    // 罫線
+                    VStack(spacing: 22) {
+                        ForEach(0..<8, id: \.self) { _ in
+                            Rectangle().fill(Color(red: 0.85, green: 0.80, blue: 0.68)).frame(height: 1)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .clipped()
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 3))
+                .overlay(RoundedRectangle(cornerRadius: 3).inset(by: 2).stroke(Color(red: 0.35, green: 0.23, blue: 0.15), lineWidth: 3))
+            )
+            .padding(.horizontal, 24)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if shownCount < notes.count {
+                shownCount = notes.count
+            } else {
+                proceed()
+            }
+        }
+        .task {
+            // 1行ずつ、浮かび上がるように見せる
+            for index in notes.indices {
+                try? await Task.sleep(for: .milliseconds(index == 0 ? 200 : 900))
+                if Task.isCancelled { return }
+                withAnimation(.easeIn(duration: 0.6)) { shownCount = index + 1 }
+            }
+        }
     }
 }
 

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 雨の夜だけ開く図書室。歩き回って幽霊と話し、ストーリーを進める。
-/// 第1章からは、本の中（『走れメロス』の世界）にも入る
+/// 第1章からは、本の中（『走れメロス』『吾輩は猫である』『銀河鉄道の夜』の世界）にも入る
 struct NightLibraryView: View {
     let story: StoryStore
     /// ずんだもんの部屋へ帰る
@@ -12,6 +12,12 @@ struct NightLibraryView: View {
     @State private var showsItems = false
     /// 開いている本の中のマップ（本の中にいないときは nil）
     @State private var melosScene: MelosScene?
+    @State private var nekoScene: NekoScene?
+    @State private var gingaScene: GingaScene?
+
+    private enum Chapter {
+        case prologue, chapter1, chapter2, chapter3
+    }
 
     init(story: StoryStore, leave: @escaping () -> Void) {
         self.story = story
@@ -19,13 +25,26 @@ struct NightLibraryView: View {
         _scene = State(initialValue: NightLibraryScene(flags: story.flags))
         let runner = StoryRunner()
         // 章のはじめは、真っ暗な画面の語りや見出しから始める
-        let startsChapter = !story.has(.prologueMetFumi) || (story.has(.prologueCleared) && !story.has(.chapter1Started))
+        let startsChapter = !story.has(.prologueMetFumi)
+            || (story.has(.prologueCleared) && !story.has(.chapter1Started))
+            || (story.has(.chapter1Cleared) && !story.has(.chapter2Started))
+            || (story.has(.chapter2Cleared) && !story.has(.chapter3Started))
         runner.setBlackedOut(startsChapter)
         _runner = State(initialValue: runner)
     }
 
-    /// 序章を遊んでいる最中か（終わっていれば第1章）
-    private var isPrologue: Bool { !story.has(.prologueCleared) }
+    /// いま遊んでいる章（最後の章を終えたあとも、その章のまま）
+    private var chapter: Chapter {
+        if !story.has(.prologueCleared) {
+            .prologue
+        } else if !story.has(.chapter1Cleared) {
+            .chapter1
+        } else if !story.has(.chapter2Cleared) {
+            .chapter2
+        } else {
+            .chapter3
+        }
+    }
 
     private var prologue: PrologueEvents {
         PrologueEvents(runner: runner, story: story, scene: scene, leave: leave)
@@ -53,7 +72,50 @@ struct NightLibraryView: View {
         )
     }
 
+    private var chapter2: Chapter2Events {
+        let story = story
+        return Chapter2Events(
+            runner: runner,
+            story: story,
+            library: scene,
+            openBook: { [self] in
+                let book = NekoScene(flags: story.flags)
+                nekoScene = book
+                return book
+            },
+            closeBook: { [self] in nekoScene = nil },
+            book: { [self] in nekoScene },
+            leave: leave
+        )
+    }
+
+    private var chapter3: Chapter3Events {
+        let story = story
+        return Chapter3Events(
+            runner: runner,
+            story: story,
+            library: scene,
+            openBook: { [self] in
+                let book = GingaScene(flags: story.flags)
+                gingaScene = book
+                return book
+            },
+            closeBook: { [self] in gingaScene = nil },
+            book: { [self] in gingaScene },
+            leave: leave
+        )
+    }
+
     private var isInputEnabled: Bool { !runner.isRunning && !showsItems }
+
+    private var libraryObjective: String {
+        switch chapter {
+        case .prologue: PrologueEvents.objective(story)
+        case .chapter1: Chapter1Events.objective(story)
+        case .chapter2: Chapter2Events.objective(story)
+        case .chapter3: Chapter3Events.objective(story)
+        }
+    }
 
     var body: some View {
         Group {
@@ -63,7 +125,7 @@ struct NightLibraryView: View {
                     idleMessage: Chapter1Events.bookObjective(story, clock: melosScene.clock),
                     isInputEnabled: isInputEnabled
                 ) { interactable in
-                    interactInBook(with: interactable)
+                    interactInMelos(with: interactable)
                 }
                 .overlay(alignment: .topTrailing) {
                     SunMeter(clock: melosScene.clock)
@@ -71,10 +133,32 @@ struct NightLibraryView: View {
                         .padding(.trailing, 16)
                         .allowsHitTesting(false)
                 }
+            } else if let nekoScene {
+                WalkGameView(
+                    scene: nekoScene,
+                    idleMessage: Chapter2Events.bookObjective(nekoScene.progress),
+                    isInputEnabled: isInputEnabled
+                ) { interactable in
+                    interactInNeko(with: interactable)
+                }
+                .overlay(alignment: .topTrailing) {
+                    NoteMeter(progress: nekoScene.progress)
+                        .padding(.top, 64)
+                        .padding(.trailing, 16)
+                        .allowsHitTesting(false)
+                }
+            } else if let gingaScene {
+                WalkGameView(
+                    scene: gingaScene,
+                    idleMessage: Chapter3Events.bookObjective(story, isCarrying: gingaScene.isCarryingLetter),
+                    isInputEnabled: isInputEnabled
+                ) { interactable in
+                    interactInGinga(with: interactable)
+                }
             } else {
                 WalkGameView(
                     scene: scene,
-                    idleMessage: isPrologue ? PrologueEvents.objective(story) : Chapter1Events.objective(story),
+                    idleMessage: libraryObjective,
                     isInputEnabled: isInputEnabled
                 ) { interactable in
                     interact(with: interactable)
@@ -107,12 +191,19 @@ struct NightLibraryView: View {
             StoryOverlay(runner: runner)
         }
         .onAppear {
-            if isPrologue {
+            switch chapter {
+            case .prologue:
                 let prologue = prologue
                 runner.run { await prologue.arrive() }
-            } else {
+            case .chapter1:
                 let chapter1 = chapter1
                 runner.run { await chapter1.arrive() }
+            case .chapter2:
+                let chapter2 = chapter2
+                runner.run { await chapter2.arrive() }
+            case .chapter3:
+                let chapter3 = chapter3
+                runner.run { await chapter3.arrive() }
             }
         }
         .onChange(of: runner.isRunning) { _, isRunning in
@@ -124,22 +215,38 @@ struct NightLibraryView: View {
     private func interact(with interactable: NightLibraryInteractable) {
         let prologue = prologue
         let chapter1 = chapter1
-        let isPrologue = isPrologue
+        let chapter2 = chapter2
+        let chapter3 = chapter3
+        let chapter = chapter
         runner.run {
             switch interactable {
-            case .fumi: isPrologue ? await prologue.talkToFumi() : await chapter1.talkToFumi()
+            case .fumi:
+                switch chapter {
+                case .prologue: await prologue.talkToFumi()
+                case .chapter1: await chapter1.talkToFumi()
+                case .chapter2: await chapter2.talkToFumi()
+                case .chapter3: await chapter3.talkToFumi()
+                }
             case .child: await prologue.talkToChild()
             case .taku: await chapter1.talkToTaku()
             case .takuBookmark: await chapter1.pickUpTakuBookmark()
+            case .tama: await chapter2.talkToTama()
+            case .sachi: await chapter3.talkToSachi()
             case .bookshelf(let index): await prologue.examineShelf(index)
             case .pictureBookShelf: await prologue.examinePictureBookShelf()
             case .bookmark: await prologue.pickUpBookmark()
-            case .exit: isPrologue ? await prologue.exit() : await chapter1.exit()
+            case .exit:
+                switch chapter {
+                case .prologue: await prologue.exit()
+                case .chapter1: await chapter1.exit()
+                case .chapter2: await chapter2.exit()
+                case .chapter3: await chapter3.exit()
+                }
             }
         }
     }
 
-    private func interactInBook(with interactable: MelosInteractable) {
+    private func interactInMelos(with interactable: MelosInteractable) {
         let chapter1 = chapter1
         runner.run {
             switch interactable {
@@ -152,6 +259,62 @@ struct NightLibraryView: View {
             case .gate: await chapter1.gate()
             }
         }
+    }
+
+    private func interactInNeko(with interactable: NekoInteractable) {
+        let chapter2 = chapter2
+        runner.run {
+            switch interactable {
+            case .hedgeNote: await chapter2.hedgeNote()
+            case .master: await chapter2.master()
+            case .zouni: await chapter2.zouni()
+            case .mikeko: await chapter2.mikeko()
+            case .brazier: await chapter2.brazier()
+            case .kamado: await chapter2.kamado()
+            case .table: await chapter2.table()
+            }
+        }
+    }
+
+    private func interactInGinga(with interactable: GingaInteractable) {
+        let chapter3 = chapter3
+        runner.run {
+            switch interactable {
+            case .seat(let index): await chapter3.seat(index)
+            case .door(let index): await chapter3.door(index)
+            case .doorway(let index): await chapter3.doorway(index)
+            case .giovanni: await chapter3.giovanni()
+            case .campanella: await chapter3.campanella()
+            case .conductor: await chapter3.conductor()
+            case .birdCatcher: await chapter3.birdCatcher()
+            case .lighthouseKeeper: await chapter3.lighthouseKeeper()
+            case .author: await chapter3.author()
+            }
+        }
+    }
+}
+
+/// 拾ったキヨさんの書き込みの数
+private struct NoteMeter: View {
+    let progress: NoteProgress
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 6) {
+            Text("キヨさんの書き込み")
+                .font(.pixel(12))
+                .foregroundStyle(.white)
+            HStack(spacing: 4) {
+                ForEach(0..<NoteProgress.total, id: \.self) { index in
+                    Image(systemName: "pencil")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(index < progress.count ? Color(red: 0.95, green: 0.76, blue: 0.31) : Color(white: 0.35))
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(RetroWindowBackground())
+        .animation(.easeOut(duration: 0.3), value: progress.count)
     }
 }
 

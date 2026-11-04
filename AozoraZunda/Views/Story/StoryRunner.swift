@@ -11,6 +11,15 @@ enum StorySpeaker {
     case taku
     case melos
     case selinuntius
+    case tama
+    case mikeko
+    case sachi
+    case author
+    case giovanni
+    case campanella
+    case conductor
+    case birdCatcher
+    case lighthouseKeeper
 
     var name: String {
         switch self {
@@ -21,6 +30,15 @@ enum StorySpeaker {
         case .taku: "タク"
         case .melos: "メロス"
         case .selinuntius: "セリヌンティウス"
+        case .tama: "タマ"
+        case .mikeko: "三毛子"
+        case .sachi: "サチ"
+        case .author: "作者"
+        case .giovanni: "ジョバンニ"
+        case .campanella: "カムパネルラ"
+        case .conductor: "車掌"
+        case .birdCatcher: "鳥捕り"
+        case .lighthouseKeeper: "燈台看守"
         }
     }
 
@@ -34,8 +52,21 @@ enum StorySpeaker {
         case .taku: Color(red: 0.62, green: 0.80, blue: 1.0)
         case .melos: Color(red: 1.0, green: 0.62, blue: 0.50)
         case .selinuntius: Color(red: 0.85, green: 0.78, blue: 0.62)
+        case .tama: Color(red: 0.98, green: 0.78, blue: 0.55)
+        case .mikeko: Color(red: 1.0, green: 0.66, blue: 0.70)
+        case .sachi: Color(red: 0.70, green: 0.78, blue: 1.0)
+        case .author: Color(red: 0.80, green: 0.80, blue: 0.86)
+        case .giovanni, .campanella: Color(red: 0.62, green: 0.86, blue: 0.95)
+        case .conductor, .birdCatcher, .lighthouseKeeper: Color(red: 0.90, green: 0.80, blue: 0.55)
         }
     }
+}
+
+/// 本に残された書き込みの1行
+struct HandwrittenNote {
+    let text: String
+    /// 別の人の字（おフミさんの字など）。インクの色を変えて見せる
+    var isOtherHand = false
 }
 
 /// 絵本の1ページ
@@ -67,6 +98,8 @@ struct StoryScreen: Identifiable {
         case pictureBook(PictureBook)
         /// 本の一節を本のページの見た目で出す。選択肢があれば虫食いの言葉を選ぶ
         case passage(String, [String])
+        /// 本の余白の書き込み
+        case handwriting([HandwrittenNote])
     }
 
     let id = UUID()
@@ -124,6 +157,11 @@ final class StoryRunner {
     /// 本の一節を見せる
     func quote(_ text: String) async {
         _ = await present(.passage(text, []))
+    }
+
+    /// 本の余白の書き込みを見せる
+    func showHandwriting(_ notes: [HandwrittenNote]) async {
+        _ = await present(.handwriting(notes))
     }
 
     /// 虫食いの一節を見せ、選んだ言葉の番号を返す

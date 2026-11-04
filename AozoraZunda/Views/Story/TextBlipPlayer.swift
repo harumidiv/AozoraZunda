@@ -12,6 +12,10 @@ final class TextBlipPlayer {
         case child
         case taku
         case melos
+        case tama
+        case mikeko
+        case sachi
+        case author
         case narration
 
         /// 基本の高さ（Hz）
@@ -23,6 +27,10 @@ final class TextBlipPlayer {
             case .child: 1_318.5  // ミ（E6）
             case .taku: 880.0  // ラ（A5）
             case .melos: 587.3  // レ（D5）
+            case .tama: 987.8  // シ（B5）
+            case .mikeko: 1_174.7  // レ（D6）
+            case .sachi: 1_108.7  // ド#（C#6）
+            case .author: 493.9  // シ（B4）
             case .narration: 523.3  // ド（C5）
             }
         }
@@ -108,6 +116,12 @@ extension StorySpeaker {
         case .child: .child
         case .taku: .taku
         case .melos, .selinuntius: .melos
+        case .tama: .tama
+        case .mikeko: .mikeko
+        case .sachi: .sachi
+        case .author: .author
+        case .giovanni, .campanella: .taku
+        case .conductor, .birdCatcher, .lighthouseKeeper: .melos
         }
     }
 }

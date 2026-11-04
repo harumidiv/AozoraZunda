@@ -32,6 +32,8 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     /// 調べられるものの前に立ったとき・離れたときに呼ばれる
     var onFocusChange: ((Interactable?) -> Void)?
     private(set) var focus: Interactable?
+    /// プレイヤーの絵の名前の頭につける文字（本の中で猫になるときなどに変える）
+    var playerSpritePrefix = "player"
     /// 画面下でホームインジケーターなどに隠れる高さ（画面上のポイント）。マップの下端がその上に来るまでカメラを動かせる
     var bottomInset: CGFloat = 0
 
@@ -55,7 +57,9 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
 
     /// 経路探索に使う格子の1マスの大きさ（ドット）
     private static var navCell: CGFloat { 4 }
-    private var obstacleRects: [CGRect] = []
+    /// 障害物（番号つき。扉のようにあとで取り除けるもの用）
+    private var obstacles: [Int: (node: SKNode, rect: CGRect)] = [:]
+    private var nextObstacleID = 0
     /// 格子の各マスにキャラクターが立てるか。障害物が変わったら作り直す
     private var walkableGrid: [Bool]?
     /// これから通る地点（シーン座標）。先頭から順に歩く
@@ -157,7 +161,9 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     }
 
     /// 衝突判定用の見えない障害物。マス座標で指定する
-    func addObstacle(column: CGFloat, row: CGFloat, width: CGFloat, height: CGFloat) {
+    /// 取り除くときに使う番号を返す
+    @discardableResult
+    func addObstacle(column: CGFloat, row: CGFloat, width: CGFloat, height: CGFloat) -> Int {
         let origin = point(column: column, row: row + height)
         let size = CGSize(width: width * Self.tile, height: height * Self.tile)
         let node = SKNode()
@@ -166,8 +172,24 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
         body.isDynamic = false
         node.physicsBody = body
         world.addChild(node)
-        obstacleRects.append(CGRect(origin: origin, size: size))
+        let id = nextObstacleID
+        nextObstacleID += 1
+        obstacles[id] = (node, CGRect(origin: origin, size: size))
         walkableGrid = nil
+        return id
+    }
+
+    /// 障害物を取り除く（扉が開いたときなど）
+    func removeObstacle(_ id: Int) {
+        obstacles[id]?.node.removeFromParent()
+        obstacles[id] = nil
+        walkableGrid = nil
+    }
+
+    /// プレイヤーに小物を持たせる（抱えた手紙など）。プレイヤーと一緒に動く
+    func attachToPlayer(_ node: SKNode) {
+        node.removeFromParent()
+        player.addChild(node)
     }
 
     /// 足元がこの範囲（マス座標の左上と大きさ）に入ると調べられる。吹き出しは anchor に出す
@@ -322,6 +344,11 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
         player.zPosition = Self.depth(forBaseY: player.position.y)
         resetTrail()
         updateCamera()
+    }
+
+    /// プレイヤーに演出の動きをさせて、終わるまで待つ（踊る、跳ねるなど）
+    func runOnPlayer(_ action: SKAction) async {
+        await run(action, on: player)
     }
 
     /// 仲間が動くたびに呼ばれる。サブクラスで向きや歩くコマを変える（止まっているときは delta が 0）
@@ -479,7 +506,7 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     /// 足元の当たり判定（少し余裕をもたせる）が障害物に重ならないか
     private func canStand(at feet: CGPoint) -> Bool {
         let rect = CGRect(x: feet.x - 5.5, y: feet.y - 0.5, width: 11, height: 7)
-        return !obstacleRects.contains { $0.intersects(rect) }
+        return !obstacles.values.contains { $0.rect.intersects(rect) }
     }
 
     private var gridSize: (columns: Int, rows: Int) {
@@ -628,7 +655,7 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
         } else {
             frame = "stand"
         }
-        let name = "player_\(facing.rawValue)_\(frame)"
+        let name = "\(playerSpritePrefix)_\(facing.rawValue)_\(frame)"
         if name != playerTextureName {
             playerTextureName = name
             player.texture = Self.texture(name)

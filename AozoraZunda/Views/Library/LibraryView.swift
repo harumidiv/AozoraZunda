@@ -96,26 +96,32 @@ struct LibraryView: View {
         }
     }
 
-    /// 第1章を終えた朝、本物の『走れメロス』を読んでみるかたずねる（一度だけ）
+    /// 章を終えた朝に、その章の本物の本を読んでみるかたずねる（章ごとに一度だけ）
+    private static let storyBooks: [(cleared: StoryFlag, offered: StoryFlag, bookID: String, text: String)] = [
+        (.chapter1Cleared, .chapter1ReadOffered, "001567", "……メロスの続きが気になって、あんまり眠れなかったのだ。本物の『走れメロス』、読んでみるのだ？"),
+        (.chapter2Cleared, .chapter2ReadOffered, "000789", "……タマと読んだ『吾輩は猫である』、ほんとうはもっと長いのだ。本物、読んでみるのだ？"),
+        (.chapter3Cleared, .chapter3ReadOffered, "000456", "……ジョバンニとカムパネルラ、あのあとどうなったのだ……。本物の『銀河鉄道の夜』、読んでみるのだ？"),
+    ]
+
     private func offerStoryBookIfNeeded() {
-        guard story.has(.chapter1Cleared), !story.has(.chapter1ReadOffered) else { return }
-        story.set(.chapter1ReadOffered)
+        guard let offer = Self.storyBooks.first(where: { story.has($0.cleared) && !story.has($0.offered) }) else { return }
+        story.set(offer.offered)
         dialog = RoomDialog(
-            text: "……メロスの続きが気になって、あんまり眠れなかったのだ。本物の『走れメロス』、読んでみるのだ？",
+            text: offer.text,
             choices: [
                 GameChoice("よむ") {
                     dialog = nil
-                    Task { await openMelos() }
+                    Task { await openStoryBook(id: offer.bookID) }
                 },
                 GameChoice("あとにする") { dialog = nil },
             ]
         )
     }
 
-    private func openMelos() async {
+    private func openStoryBook(id: String) async {
         await catalog.loadIfNeeded()
-        if let melos = catalog.books.first(where: { $0.id == "001567" }) {
-            path.append(melos)
+        if let book = catalog.books.first(where: { $0.id == id }) {
+            path.append(book)
         } else {
             dialog = RoomDialog(text: "本が見つからなかったのだ……。図書館の司書さんに聞いてみるのだ", choices: [close])
         }
