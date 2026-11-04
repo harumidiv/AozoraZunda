@@ -170,6 +170,28 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
         ))
     }
 
+    /// 調べられる場所を取り除く（成仏した幽霊など）。いま前に立っていれば吹き出しも消す
+    func removeZones(where matches: (Interactable) -> Bool) {
+        zones.removeAll { matches($0.interactable) }
+        if let focus, matches(focus) {
+            self.focus = nil
+            bubble.isHidden = true
+            onFocusChange?(nil)
+        }
+    }
+
+    /// カメラに付けるノードを追加する（画面全体を暗くする夜の色など、マップと一緒に動かないもの）
+    func addToCamera(_ node: SKNode) {
+        playerCamera.addChild(node)
+    }
+
+    /// アクションを実行し、終わるまで待つ（イベントの演出用）
+    func run(_ action: SKAction, on node: SKNode) async {
+        await withCheckedContinuation { continuation in
+            node.run(action) { continuation.resume() }
+        }
+    }
+
     /// 調べられる場所の中身を差し替える（本の冊数で本棚の説明を変えるときなど）
     func replaceInteractable(where matches: (Interactable) -> Bool, with interactable: Interactable) {
         for index in zones.indices where matches(zones[index].interactable) {

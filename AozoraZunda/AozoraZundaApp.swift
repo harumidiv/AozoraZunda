@@ -14,6 +14,7 @@ struct AozoraZundaApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var catalogStore = CatalogStore()
     @State private var libraryStore = LibraryStore()
+    @State private var storyStore = StoryStore()
     @State private var hasStartedAds = false
 
     var body: some Scene {
@@ -21,6 +22,7 @@ struct AozoraZundaApp: App {
             ContentView()
                 .environment(catalogStore)
                 .environment(libraryStore)
+                .environment(storyStore)
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             guard phase == .active else { return }

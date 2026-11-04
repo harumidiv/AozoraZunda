@@ -5,6 +5,8 @@ struct LibraryView: View {
     @Environment(LibraryStore.self) private var library
     /// 図書館へ出かける
     let goToLibrary: () -> Void
+    /// 夜まで待って、ストーリーの舞台の夜間図書室へ行く
+    let goToNightLibrary: () -> Void
 
     @State private var path = NavigationPath()
     @State private var scene: RoomScene
@@ -19,8 +21,9 @@ struct LibraryView: View {
     ]
 
     /// startsAtDoor: 図書館から帰ってきたときはドアの前から始める
-    init(startsAtDoor: Bool = false, goToLibrary: @escaping () -> Void) {
+    init(startsAtDoor: Bool = false, goToLibrary: @escaping () -> Void, goToNightLibrary: @escaping () -> Void) {
         self.goToLibrary = goToLibrary
+        self.goToNightLibrary = goToNightLibrary
         _scene = State(initialValue: RoomScene(startsAtDoor: startsAtDoor))
     }
 
@@ -73,7 +76,16 @@ struct LibraryView: View {
         case .desk:
             dialog = deskDialog()
         case .bed:
-            dialog = RoomDialog(text: Self.bedLines.randomElement() ?? "", choices: [close])
+            dialog = RoomDialog(
+                text: Self.bedLines.randomElement() ?? "",
+                choices: [
+                    GameChoice("夜まで まつ（ストーリー）") {
+                        dialog = nil
+                        goToNightLibrary()
+                    },
+                    close,
+                ]
+            )
         case .tv:
             dialog = tvDialog()
         case .door:
