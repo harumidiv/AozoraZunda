@@ -5,7 +5,9 @@ struct LibraryView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(CatalogStore.self) private var catalog
     @Environment(StoryStore.self) private var story
-    /// 図書館へ出かける
+    /// ドアから町へ出かける
+    let goOutside: () -> Void
+    /// 図書館へ直接行く（本棚がからっぽのときの案内から）
     let goToLibrary: () -> Void
     /// 夜まで待って、ストーリーの舞台の夜間図書室へ行く
     let goToNightLibrary: () -> Void
@@ -22,8 +24,9 @@ struct LibraryView: View {
         "まくらの下に読みかけの本をかくしているのは、ないしょなのだ",
     ]
 
-    /// startsAtDoor: 図書館から帰ってきたときはドアの前から始める
-    init(startsAtDoor: Bool = false, goToLibrary: @escaping () -> Void, goToNightLibrary: @escaping () -> Void) {
+    /// startsAtDoor: 町から帰ってきたときはドアの前から始める
+    init(startsAtDoor: Bool = false, goOutside: @escaping () -> Void, goToLibrary: @escaping () -> Void, goToNightLibrary: @escaping () -> Void) {
+        self.goOutside = goOutside
         self.goToLibrary = goToLibrary
         self.goToNightLibrary = goToNightLibrary
         _scene = State(initialValue: RoomScene(startsAtDoor: startsAtDoor))
@@ -33,7 +36,7 @@ struct LibraryView: View {
         NavigationStack(path: $path) {
             WalkGameView(
                 scene: scene,
-                idleMessage: "ずんだもんの部屋なのだ。行きたい場所をタップすると歩くのだ。下のドアから図書館へ行けるのだ",
+                idleMessage: "ずんだもんの部屋なのだ。行きたい場所をタップすると歩くのだ。下のドアから町へ出かけられるのだ",
                 isInputEnabled: dialog == nil,
                 showsBanner: true
             ) { interactable in
@@ -92,7 +95,7 @@ struct LibraryView: View {
         case .tv:
             dialog = tvDialog()
         case .door:
-            goToLibrary()
+            goOutside()
         }
     }
 

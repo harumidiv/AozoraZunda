@@ -18,7 +18,7 @@ enum RoomInteractable: WalkInteractable {
         case .desk: "机 ── 読みかけの本のつづきを読むのだ"
         case .bed: "ベッド ── ふかふかなのだ"
         case .tv: "テレビ ── 何か映っているのだ"
-        case .door: "ドア ── 図書館へ本を借りにいくのだ"
+        case .door: "ドア ── 町へ出かけるのだ。図書館もあるのだ"
         }
     }
 
@@ -42,7 +42,7 @@ final class RoomScene: WalkScene<RoomInteractable> {
     private let shelfBookLayer = SKNode()
     private var shelfNode: SKSpriteNode?
 
-    /// startsAtDoor: 図書館から帰ってきたときは、ドアの少し内側から始める（着いた途端に「でかける」が出ないように）
+    /// startsAtDoor: 町から帰ってきたときは、ドアの少し内側から始める（着いた途端に「でかける」が出ないように）
     init(startsAtDoor: Bool = false) {
         super.init(columns: 12, rows: 11, playerStart: startsAtDoor ? (6, 8.3) : (6, 7))
     }

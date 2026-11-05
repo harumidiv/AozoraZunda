@@ -122,6 +122,10 @@ extension StorySpeaker {
         case .author: .author
         case .giovanni, .campanella: .taku
         case .conductor, .birdCatcher, .lighthouseKeeper: .melos
+        case .townsperson(.baker): .fumi
+        case .townsperson(.boy): .child
+        case .townsperson(.grandpa): .author
+        case .townsperson(.student): .sachi
         }
     }
 }

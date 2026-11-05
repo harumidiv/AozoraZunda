@@ -3,10 +3,12 @@ import SwiftUI
 /// 作品の詳細とダウンロード
 struct BookDetailView: View {
     @Environment(LibraryStore.self) private var library
+    @Environment(ErrandStore.self) private var errands
     let book: CatalogBook
 
     @State private var errorMessage: String?
     @State private var isConfirmingDelete = false
+    @State private var borrowNote: String?
 
     var body: some View {
         List {
@@ -38,6 +40,23 @@ struct BookDetailView: View {
                 }
                 Link(destination: book.cardURL) {
                     Label("図書カードを開く", systemImage: "safari")
+                }
+            }
+
+            if errands.isLookingForBook {
+                Section {
+                    if errands.carrying?.id == book.id {
+                        Label("町の人に届けるために、かりています", systemImage: "bag")
+                    } else {
+                        Button("町の人に届ける（かりる）", systemImage: "bag.badge.plus") {
+                            errands.borrow(book)
+                            borrowNote = errands.borrowNote(for: book)
+                        }
+                    }
+                } footer: {
+                    if let borrowNote {
+                        Text(borrowNote)
+                    }
                 }
             }
 

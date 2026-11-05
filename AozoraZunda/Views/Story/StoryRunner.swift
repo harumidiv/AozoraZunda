@@ -20,6 +20,8 @@ enum StorySpeaker {
     case conductor
     case birdCatcher
     case lighthouseKeeper
+    /// 昼の町の人
+    case townsperson(Townsperson)
 
     var name: String {
         switch self {
@@ -39,6 +41,7 @@ enum StorySpeaker {
         case .conductor: "車掌"
         case .birdCatcher: "鳥捕り"
         case .lighthouseKeeper: "燈台看守"
+        case .townsperson(let person): person.name
         }
     }
 
@@ -58,6 +61,10 @@ enum StorySpeaker {
         case .author: Color(red: 0.80, green: 0.80, blue: 0.86)
         case .giovanni, .campanella: Color(red: 0.62, green: 0.86, blue: 0.95)
         case .conductor, .birdCatcher, .lighthouseKeeper: Color(red: 0.90, green: 0.80, blue: 0.55)
+        case .townsperson(.baker): Color(red: 1.0, green: 0.70, blue: 0.55)
+        case .townsperson(.boy): Color(red: 0.98, green: 0.84, blue: 0.45)
+        case .townsperson(.grandpa): Color(red: 0.85, green: 0.78, blue: 0.62)
+        case .townsperson(.student): Color(red: 0.70, green: 0.78, blue: 1.0)
         }
     }
 }
