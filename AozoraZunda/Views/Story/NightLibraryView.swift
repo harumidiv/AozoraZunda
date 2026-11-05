@@ -10,6 +10,8 @@ struct NightLibraryView: View {
     @State private var scene: NightLibraryScene
     @State private var runner: StoryRunner
     @State private var showsItems = false
+    /// 歩き回る幽霊に話しかけた回数（話しかけるたびに次のセリフにする）
+    @State private var wandererTalks: [NightWanderer: Int] = [:]
     /// 開いている本の中のマップ（本の中にいないときは nil）
     @State private var melosScene: MelosScene?
     @State private var nekoScene: NekoScene?
@@ -218,6 +220,10 @@ struct NightLibraryView: View {
         let chapter2 = chapter2
         let chapter3 = chapter3
         let chapter = chapter
+        if case .wanderer(let wanderer) = interactable {
+            talk(to: wanderer)
+            return
+        }
         runner.run {
             switch interactable {
             case .fumi:
@@ -235,6 +241,7 @@ struct NightLibraryView: View {
             case .bookshelf(let index): await prologue.examineShelf(index)
             case .pictureBookShelf: await prologue.examinePictureBookShelf()
             case .bookmark: await prologue.pickUpBookmark()
+            case .wanderer: break
             case .exit:
                 switch chapter {
                 case .prologue: await prologue.exit()
@@ -243,6 +250,18 @@ struct NightLibraryView: View {
                 case .chapter3: await chapter3.exit()
                 }
             }
+        }
+    }
+
+    /// ストーリーに関係のない幽霊の、ひとことのうわさ話
+    private func talk(to wanderer: NightWanderer) {
+        let lines = wanderer.lines(story.flags)
+        guard !lines.isEmpty else { return }
+        let count = wandererTalks[wanderer, default: 0]
+        wandererTalks[wanderer] = count + 1
+        let line = lines[count % lines.count]
+        runner.run { [runner] in
+            await runner.say(.wanderer(wanderer), line)
         }
     }
 

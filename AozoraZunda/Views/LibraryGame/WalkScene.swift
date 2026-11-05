@@ -50,7 +50,24 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     private let playerCamera = SKCameraNode()
     private let bubble = SKSpriteNode()
     private let destinationMarker = SKShapeNode(ellipseOf: CGSize(width: 10, height: 5))
-    private var zones: [(rect: CGRect, interactable: Interactable, anchor: CGPoint)] = []
+    private var zones: [Zone] = []
+
+    /// 調べられる範囲。follow があれば、そのノードと一緒に動く（歩き回る幽霊など）
+    private struct Zone {
+        var rect: CGRect
+        var interactable: Interactable
+        var anchor: CGPoint
+        var follow: (node: SKNode, anchorRise: CGFloat)?
+
+        /// ついていくノードの足元に合わせて、範囲と吹き出しの位置を動かす
+        mutating func track() {
+            // ノードは addToWorld で地図に直接置いたもの（地図の座標 = シーン座標）
+            guard let follow else { return }
+            let position = follow.node.position
+            rect.origin = CGPoint(x: position.x - rect.width / 2, y: position.y - rect.height + 3)
+            anchor = CGPoint(x: position.x, y: position.y + follow.anchorRise)
+        }
+    }
     private var isSetUp = false
 
     // MARK: Tap-to-walk
@@ -195,11 +212,24 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     /// 足元がこの範囲（マス座標の左上と大きさ）に入ると調べられる。吹き出しは anchor に出す
     func addZone(column: CGFloat, row: CGFloat, width: CGFloat, height: CGFloat, interactable: Interactable, anchor: (column: CGFloat, row: CGFloat)) {
         let origin = point(column: column, row: row + height)
-        zones.append((
+        zones.append(Zone(
             rect: CGRect(x: origin.x, y: origin.y, width: width * Self.tile, height: height * Self.tile),
             interactable: interactable,
             anchor: point(column: anchor.column, row: anchor.row)
         ))
+    }
+
+    /// 地図の上を動くノード（歩き回るキャラクター）の足元に、一緒に動く調べられる範囲を付ける。
+    /// 大きさはマス単位、吹き出しは足元から anchorRise ドット上に出す
+    func addZone(following node: SKNode, width: CGFloat, height: CGFloat, interactable: Interactable, anchorRise: CGFloat = 26) {
+        var zone = Zone(
+            rect: CGRect(x: 0, y: 0, width: width * Self.tile, height: height * Self.tile),
+            interactable: interactable,
+            anchor: .zero,
+            follow: (node, anchorRise)
+        )
+        zone.track()
+        zones.append(zone)
     }
 
     /// 調べられる場所を取り除く（成仏した幽霊など）。いま前に立っていれば吹き出しも消す
@@ -680,11 +710,15 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     }
 
     private func updateFocus() {
+        for index in zones.indices where zones[index].follow != nil {
+            zones[index].track()
+        }
         let feet = player.position
         let zone = zones.first { $0.rect.contains(feet) }
         if let zone {
             bubble.isHidden = false
-            if bubble.position.x != zone.anchor.x {
+            // 吹き出しはその場で上下に 2 ドット揺れるので、それより大きくずれたときだけ置き直す（動く範囲用）
+            if bubble.position.x != zone.anchor.x || abs(bubble.position.y - zone.anchor.y) > 2.5 {
                 bubble.removeAllActions()
                 bubble.position = zone.anchor
                 bubble.run(.repeatForever(.sequence([

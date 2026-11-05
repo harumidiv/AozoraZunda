@@ -126,6 +126,10 @@ extension StorySpeaker {
         case .townsperson(.boy): .child
         case .townsperson(.grandpa): .author
         case .townsperson(.student): .sachi
+        case .wanderer(.bookworm): .author
+        case .wanderer(.shosei): .taku
+        case .wanderer(.haikara): .mikeko
+        case .wanderer(.wisp): .child
         }
     }
 }

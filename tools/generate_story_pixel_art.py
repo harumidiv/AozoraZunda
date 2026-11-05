@@ -17,6 +17,7 @@ from PIL import Image, ImageDraw
 from story_chapter1_art import chapter1_sprites
 from story_chapter2_art import chapter2_sprites
 from story_chapter3_art import chapter3_sprites
+from story_wanderers_art import wanderer_sprites
 from generate_pixel_art import (
     CREAM,
     CREAM_DARK,
@@ -523,6 +524,7 @@ def build_sprites():
     sprites.update(chapter1_sprites())
     sprites.update(chapter2_sprites())
     sprites.update(chapter3_sprites())
+    sprites.update(wanderer_sprites())
     return sprites
 
 

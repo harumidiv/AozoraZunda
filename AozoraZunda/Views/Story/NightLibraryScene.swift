@@ -17,6 +17,8 @@ enum NightLibraryInteractable: WalkInteractable {
     case pictureBookShelf
     /// 床に落ちているしおり
     case bookmark
+    /// ストーリーには関係なく、図書室を歩き回っている幽霊
+    case wanderer(NightWanderer)
     case exit
 
     static let cornerShelf = 3
@@ -33,13 +35,14 @@ enum NightLibraryInteractable: WalkInteractable {
         case .bookshelf: "本棚 ── むずかしそうな本がぎっしりなのだ"
         case .pictureBookShelf: "絵本の棚 ── 表紙が見えるように並んでいるのだ"
         case .bookmark: "床で何かが光っているのだ"
+        case .wanderer(let wanderer): wanderer.prompt
         case .exit: "入口 ── ずんだもんの部屋に帰るのだ"
         }
     }
 
     var actionTitle: String {
         switch self {
-        case .fumi, .child, .taku, .tama, .sachi: "はなす"
+        case .fumi, .child, .taku, .tama, .sachi, .wanderer: "はなす"
         case .bookmark, .takuBookmark: "ひろう"
         case .exit: "かえる"
         default: "しらべる"
@@ -78,6 +81,8 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
         buildFurniture()
         buildLighting()
         buildCharacters()
+        // ストーリーの幽霊を優先して話しかけられるよう、調べられる範囲はあとから足す
+        buildWanderers()
     }
 
     private func buildRoom() {
@@ -349,6 +354,88 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
             .sequence([.wait(forDuration: 0.6), .fadeOut(withDuration: 1.8)]),
         ]), on: sachi)
         sachi.removeFromParent()
+    }
+
+    // MARK: - 歩き回る幽霊
+
+    private func buildWanderers() {
+        for wanderer in NightWanderer.allCases where flags.contains(wanderer.appearsAfter) {
+            let route = wanderer.route.map { point(column: $0.column, row: $0.row) }
+            guard let start = route.first else { continue }
+
+            // 入れ物ごと道を歩かせ、中の絵はその場でふわふわ浮かせる（動きが重ならないように分ける）
+            let body = SKNode()
+            body.position = start
+            let ghost = SKSpriteNode()
+            setUpGhost(ghost, frames: wanderer.frames, at: .zero)
+            ghost.removeFromParent()
+            ghost.zPosition = 0
+            if wanderer == .wisp {
+                ghost.alpha = 0.8
+                ghost.childNode(withName: "shine")?.alpha = 0.3
+            }
+            body.addChild(ghost)
+            addToWorld(body)
+            addZone(following: body, width: 2.2, height: 1.4, interactable: .wanderer(wanderer))
+
+            walkers.append(Walker(wanderer: wanderer, body: body, ghost: ghost, route: route))
+        }
+    }
+
+    /// 歩き回る幽霊の、道のどこまで来たか
+    private struct Walker {
+        let wanderer: NightWanderer
+        let body: SKNode
+        let ghost: SKSpriteNode
+        let route: [CGPoint]
+        /// いま向かっている曲がり角
+        var target = 1
+        /// 曲がり角で立ち止まっている残り時間
+        var resting: TimeInterval = 0
+    }
+
+    private var walkers: [Walker] = []
+    private var lastWanderTime: TimeInterval?
+
+    override func update(_ currentTime: TimeInterval) {
+        super.update(currentTime)
+        let delta = min(1.0 / 20, currentTime - (lastWanderTime ?? currentTime))
+        lastWanderTime = currentTime
+        for index in walkers.indices {
+            moveWalker(&walkers[index], delta: delta)
+        }
+    }
+
+    private func moveWalker(_ walker: inout Walker, delta: TimeInterval) {
+        // ずんだもんが前に立っている間は、立ち止まって話を聞いてくれる
+        guard focus != .wanderer(walker.wanderer), walker.route.count > 1 else { return }
+        if walker.resting > 0 {
+            walker.resting -= delta
+            return
+        }
+        let position = walker.body.position
+        let goal = walker.route[walker.target]
+        let dx = goal.x - position.x, dy = goal.y - position.y
+        let distance = hypot(dx, dy)
+        let step = CGFloat(delta) * Self.tile / walker.wanderer.secondsPerTile
+        if distance <= step {
+            walker.body.position = goal
+            walker.target = (walker.target + 1) % walker.route.count
+            walker.resting = .random(in: walker.wanderer.pause)
+        } else {
+            walker.body.position = CGPoint(x: position.x + dx / distance * step, y: position.y + dy / distance * step)
+            // 進む向きに合わせて左右を向く
+            if abs(dx) > 0.5 {
+                walker.ghost.xScale = dx < 0 ? -1 : 1
+            }
+        }
+    }
+
+    override func didSimulatePhysics() {
+        super.didSimulatePhysics()
+        for walker in walkers {
+            walker.body.zPosition = Self.depth(forBaseY: walker.body.position.y)
+        }
     }
 
     // MARK: - しおり
