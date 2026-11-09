@@ -80,6 +80,54 @@ enum StoryFlag: String, Codable, CaseIterable {
     case chapter3Cleared
     /// 部屋で本物の『銀河鉄道の夜』を読むかたずねた
     case chapter3ReadOffered
+
+    // 第4章「声に出すと、もっと楽しいのだ」（注文の多い料理店）
+    /// 食いしん坊の兄弟の幽霊と出会った
+    case chapter4Started
+    /// 注文の札がかかった扉の鍵をあずかった
+    case chapter4GotKey
+    /// 本の中で、山猫軒から逃げ出した（3人の読み合わせを最後までやった）
+    case chapter4Escaped
+    /// 兄弟がそろって成仏した
+    case chapter4BrothersPassed
+    /// 第4章を最後まで遊んだ
+    case chapter4Cleared
+    /// 部屋で本物の『注文の多い料理店』を読むかたずねた
+    case chapter4ReadOffered
+
+    // 第5章「消えた本」
+    /// 誰もいない夜の図書室に来た
+    case chapter5Started
+    /// すみの棚の、一冊ぶんの隙間に気づいた
+    case chapter5FoundGap
+    /// 貸出カードを見つけた（最後の名前は、子どもの丸い字）
+    case chapter5ReadCard
+    /// おフミさんに聞いて「……さあね」とはぐらかされた
+    case chapter5AskedFumi
+    /// 本をかかえた小さな影を見た
+    case chapter5SawShadow
+    /// 第5章を最後まで遊んだ（「この本、ずんだもんが読みたいのだ」）
+    case chapter5Cleared
+
+    // 終章「最後まで読むのだ」
+    /// おフミさんから、はるとの約束の話を聞いた
+    case finaleStarted
+    /// 狐の母さんから白銅貨をもらった
+    case finaleGotCoins
+    /// 帽子屋で毛糸の手袋を買った
+    case finaleGotMittens
+    /// 本の中で、はるを見つけた
+    case finaleFoundHaru
+    /// ずんだもんが『手袋を買いに』を最後まで読んだ
+    case finaleReadToEnd
+    /// おフミさんとはるが、一緒に成仏した
+    case finaleFumiPassed
+    /// 終章を最後まで遊んだ
+    case finaleCleared
+    /// エピローグを見た（幽霊図鑑に、ずんだもんの読書感想メモが追加される）
+    case epilogueCleared
+    /// 部屋で本物の『手袋を買いに』を読むかたずねた
+    case finaleReadOffered
 }
 
 /// ストーリーで手に入るもちもの
@@ -91,6 +139,11 @@ enum StoryItem: String, Codable, CaseIterable, Identifiable {
     case annotatedBook
     case unsentLetter
     case apple
+    case orderKey
+    case lendingCard
+    case coins
+    case mittens
+    case tebukuroBook
 
     var id: String { rawValue }
 
@@ -103,6 +156,11 @@ enum StoryItem: String, Codable, CaseIterable, Identifiable {
         case .annotatedBook: "書き込みだらけの文庫本"
         case .unsentLetter: "出せなかった手紙"
         case .apple: "苹果"
+        case .orderKey: "注文の札がかかった鍵"
+        case .lendingCard: "古い貸出カード"
+        case .coins: "二つの白銅貨"
+        case .mittens: "毛糸の手袋"
+        case .tebukuroBook: "『手袋を買いに』"
         }
     }
 
@@ -115,6 +173,11 @@ enum StoryItem: String, Codable, CaseIterable, Identifiable {
         case .annotatedBook: "キヨさんの『吾輩は猫である』。ページのあちこちに鉛筆の書き込みがある"
         case .unsentLetter: "サチが『銀河鉄道の夜』の作者に書いた手紙。切手はまだ貼られていない"
         case .apple: "燈台看守にもらった、黄金と紅の大きな苹果"
+        case .orderKey: "兄弟の『注文の多い料理店』にはさまっていた鍵。「どなたもどうかお入りください」と書いた札がついている"
+        case .lendingCard: "『手袋を買いに』の貸出カード。返却日の欄は空っぽで、最後の名前は子どもの丸い字で「はる」"
+        case .coins: "狐の母さんにもらった白銅貨。カチ合せると、チンチンとよい音がする"
+        case .mittens: "帽子屋さんで買った、子供用の毛糸の手袋。赤くて、あったかい"
+        case .tebukuroBook: "はるがずっとかかえていた、青い表紙の本。押し花のしおりがはさまっていた"
         }
     }
 
@@ -128,6 +191,11 @@ enum StoryItem: String, Codable, CaseIterable, Identifiable {
         case .annotatedBook: "sprite_item_annotated_book"
         case .unsentLetter: "sprite_item_letter"
         case .apple: "sprite_item_apple"
+        case .orderKey: "sprite_item_order_key"
+        case .lendingCard: "sprite_item_lending_card"
+        case .coins: "sprite_item_coins"
+        case .mittens: "sprite_item_mittens"
+        case .tebukuroBook: "sprite_item_tebukuro_book"
         }
     }
 }

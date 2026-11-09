@@ -20,6 +20,18 @@ enum StorySpeaker {
     case conductor
     case birdCatcher
     case lighthouseKeeper
+    /// 第4章の、食いしん坊の兄弟（兄・弟）
+    case taichi
+    case jiro
+    /// 山猫軒の扉の向こうの声（山猫の子分）
+    case wildcat
+    /// 終章の少女の幽霊
+    case haru
+    case foxMother
+    case foxChild
+    case hatter
+    /// エピローグの、つぎのお客さん
+    case newcomer
     /// 昼の町の人
     case townsperson(Townsperson)
     /// 夜間図書室を歩き回っている幽霊
@@ -43,6 +55,14 @@ enum StorySpeaker {
         case .conductor: "車掌"
         case .birdCatcher: "鳥捕り"
         case .lighthouseKeeper: "燈台看守"
+        case .taichi: "タイチ"
+        case .jiro: "ジロ"
+        case .wildcat: "扉の向こうの声"
+        case .haru: "はる"
+        case .foxMother: "母さん狐"
+        case .foxChild: "子狐"
+        case .hatter: "帽子屋さん"
+        case .newcomer: "あたらしいお客さん"
         case .townsperson(let person): person.name
         case .wanderer(let wanderer): wanderer.name
         }
@@ -64,6 +84,13 @@ enum StorySpeaker {
         case .author: Color(red: 0.80, green: 0.80, blue: 0.86)
         case .giovanni, .campanella: Color(red: 0.62, green: 0.86, blue: 0.95)
         case .conductor, .birdCatcher, .lighthouseKeeper: Color(red: 0.90, green: 0.80, blue: 0.55)
+        case .taichi: Color(red: 0.70, green: 0.88, blue: 0.55)
+        case .jiro: Color(red: 0.62, green: 0.78, blue: 1.0)
+        case .wildcat: Color(red: 0.55, green: 0.80, blue: 1.0)
+        case .haru: Color(red: 1.0, green: 0.72, blue: 0.78)
+        case .foxMother, .foxChild: Color(red: 0.85, green: 0.88, blue: 0.95)
+        case .hatter: Color(red: 0.90, green: 0.80, blue: 0.55)
+        case .newcomer: Color(red: 0.98, green: 0.84, blue: 0.45)
         case .townsperson(.baker): Color(red: 1.0, green: 0.70, blue: 0.55)
         case .townsperson(.boy): Color(red: 0.98, green: 0.84, blue: 0.45)
         case .townsperson(.grandpa): Color(red: 0.85, green: 0.78, blue: 0.62)

@@ -104,6 +104,8 @@ struct LibraryView: View {
         (.chapter1Cleared, .chapter1ReadOffered, "001567", "……メロスの続きが気になって、あんまり眠れなかったのだ。本物の『走れメロス』、読んでみるのだ？"),
         (.chapter2Cleared, .chapter2ReadOffered, "000789", "……タマと読んだ『吾輩は猫である』、ほんとうはもっと長いのだ。本物、読んでみるのだ？"),
         (.chapter3Cleared, .chapter3ReadOffered, "000456", "……ジョバンニとカムパネルラ、あのあとどうなったのだ……。本物の『銀河鉄道の夜』、読んでみるのだ？"),
+        (.chapter4Cleared, .chapter4ReadOffered, "043754", "……「わん、わん、ぐゎあ」。思い出し笑いが止まらないのだ。本物の『注文の多い料理店』、声に出して読んでみるのだ？"),
+        (.epilogueCleared, .finaleReadOffered, "000637", "……今日はどれから読むのだ。まずは、はるに読んだ『手袋を買いに』を、もう一回読むのだ？"),
     ]
 
     private func offerStoryBookIfNeeded() {

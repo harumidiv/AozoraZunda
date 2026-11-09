@@ -30,7 +30,7 @@ struct Chapter3Events {
     /// 図書室にいるときの「いまやること」
     static func objective(_ story: StoryStore) -> String {
         if story.has(.chapter3Cleared) {
-            return "夜の図書室なのだ。つぎのお話は、まだ準備中なのだ"
+            return "夜の図書室なのだ"
         } else if story.has(.chapter3LetterDelivered) {
             return "サチに声をかけるのだ"
         } else if story.has(.unsentLetter) {
@@ -336,7 +336,7 @@ struct Chapter3Events {
         await runner.narrate("……つづきは、まだ書けなかったのだ。\nカードは、こっそり机の引き出しにしまったのだ。")
         story.set(.chapter3Cleared)
         await runner.chapterTitle("第3章 おわり", "手紙は届くのだ")
-        await runner.narrate("つぎのお話「声に出すと、もっと楽しいのだ」は、\nただいま準備中なのだ。")
+        await runner.narrate("つぎのお話「声に出すと、もっと楽しいのだ」は、\nまた夜になったら始まるのだ。")
         leave()
     }
 

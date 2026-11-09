@@ -12,6 +12,16 @@ enum NightLibraryInteractable: WalkInteractable {
     case tama
     /// 第3章のお客さん。手紙を持った少女の幽霊
     case sachi
+    /// 第4章のお客さん。食いしん坊の兄弟
+    case brothers
+    /// カウンターの上の、貸出カードの箱
+    case cardBox
+    /// 本をかかえた小さな影（近づくと消える）
+    case shadow
+    /// 終章の少女の幽霊
+    case haru
+    /// エピローグの、つぎのお客さん
+    case newcomer
     /// 上の列の本棚（3 は右奥の「すみの棚」）
     case bookshelf(Int)
     case pictureBookShelf
@@ -31,6 +41,11 @@ enum NightLibraryInteractable: WalkInteractable {
         case .takuBookmark: "机の下で何か光っているのだ"
         case .tama: "タマ ── 閲覧机の上でまるくなっている、猫の幽霊なのだ"
         case .sachi: "サチ ── 封筒をぎゅっと胸にかかえているのだ"
+        case .brothers: "タイチとジロ ── 食いしん坊の兄弟なのだ。弟のほうが、すごく薄いのだ"
+        case .cardBox: "貸出カードの箱 ── 古いカードがぎっしりなのだ"
+        case .shadow: "……"
+        case .haru: "はる ── 赤い手袋をした、三つ編みの女の子なのだ"
+        case .newcomer: "あたらしいお客さん ── 入口で、きょろきょろしているのだ"
         case .bookshelf(Self.cornerShelf): "すみの棚 ── 古い本がぎっしり並んでいるのだ"
         case .bookshelf: "本棚 ── むずかしそうな本がぎっしりなのだ"
         case .pictureBookShelf: "絵本の棚 ── 表紙が見えるように並んでいるのだ"
@@ -42,7 +57,7 @@ enum NightLibraryInteractable: WalkInteractable {
 
     var actionTitle: String {
         switch self {
-        case .fumi, .child, .taku, .tama, .sachi, .wanderer: "はなす"
+        case .fumi, .child, .taku, .tama, .sachi, .brothers, .haru, .newcomer, .wanderer: "はなす"
         case .bookmark, .takuBookmark: "ひろう"
         case .exit: "かえる"
         default: "しらべる"
@@ -50,7 +65,7 @@ enum NightLibraryInteractable: WalkInteractable {
     }
 
     var triggersOnEnter: Bool {
-        self == .exit
+        self == .exit || self == .shadow
     }
 }
 
@@ -64,6 +79,14 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
     private let takuBookmarkSparkle = SKSpriteNode()
     private let tama = SKSpriteNode()
     private let sachi = SKSpriteNode()
+    private let taichi = SKSpriteNode()
+    private let jiro = SKSpriteNode()
+    private let shadowGirl = SKSpriteNode()
+    private let haru = SKSpriteNode()
+    private let newcomer = SKSpriteNode()
+    private var nightOverlay: SKSpriteNode?
+    private var windows: [SKSpriteNode] = []
+    private var lampGlows: [SKSpriteNode] = []
     private var cornerShelfNode: SKSpriteNode?
 
     private static let shelfColumns: [CGFloat] = [2, 5, 10, 13]
@@ -112,6 +135,7 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
         for column in [2.5, 11.5] {
             let window = place("rain_window_0", column: column, row: 0, z: -8_500)
             window.run(.repeatForever(.animate(with: rain, timePerFrame: 0.16)))
+            windows.append(window)
         }
         place("clock", column: 7.5, row: 0.4, z: -8_500)
 
@@ -137,7 +161,8 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
                 interactable: .bookshelf(index), anchor: (column + 1, Self.shelfRow - 0.6)
             )
         }
-        if flags.contains(.prologueBookmarkShelved) {
+        // 第5章でしおりを抜き出すまでは、すみの棚から赤いひもがのぞいている
+        if flags.contains(.prologueBookmarkShelved) && !flags.contains(.chapter5FoundGap) {
             showShelvedBookmark()
         }
 
@@ -151,6 +176,9 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
         place("chair", column: 4, row: 7.1)
         addObstacle(column: 1, row: 7.3, width: 5, height: 1)
 
+        // カウンターの上の、貸出カードの箱
+        place("card_box", column: 8.9, row: 6.4)
+
         // 絵本の棚
         place("picture_book_shelf", column: 11.5, row: 9.2)
         addObstacle(column: 11.5, row: 9.9, width: 2, height: 0.8)
@@ -163,6 +191,7 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
         night.blendMode = .multiply
         night.zPosition = 9_000
         addToCamera(night)
+        nightOverlay = night
 
         let flames = [Self.texture("lamp_0"), Self.texture("lamp_1")]
         for (column, row) in [(8.0, 3.4), (14.0, 6.5), (1.0, 9.6)] {
@@ -176,6 +205,7 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
             glow.zPosition = 9_500
             glow.setScale(1.25)
             glow.alpha = 0.7
+            lampGlows.append(glow)
             glow.run(.repeatForever(.sequence([
                 .fadeAlpha(to: 0.5, duration: 0.5),
                 .fadeAlpha(to: 0.7, duration: 0.4),
@@ -186,7 +216,9 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
 
     private func buildCharacters() {
         setUpGhost(fumi, frames: ["fumi_0", "fumi_1"], at: point(column: 8, row: 7.3))
-        if flags.contains(.prologueMetFumi) {
+        if flags.contains(.finaleFumiPassed) {
+            fumi.removeFromParent()
+        } else if flags.contains(.prologueMetFumi) {
             showFumiZone()
         } else {
             fumi.alpha = 0
@@ -221,6 +253,37 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
             let frames = flags.contains(.chapter3LetterDelivered) ? ["sachi_happy_0", "sachi_happy_1"] : ["sachi_normal_0", "sachi_normal_1"]
             setUpGhost(sachi, frames: frames, at: point(column: 3, row: 7.1))
             addZone(column: 1.5, row: 8.3, width: 3, height: 1.3, interactable: .sachi, anchor: (3, 5.7))
+        }
+
+        // 第4章: 閲覧机に、食いしん坊の兄弟がいる（弟のジロは消えかけている）
+        if flags.contains(.chapter3Cleared) && !flags.contains(.chapter4BrothersPassed) {
+            setUpGhost(taichi, frames: ["brother_elder_0", "brother_elder_1"], at: point(column: 2.4, row: 7.1))
+            setUpGhost(jiro, frames: ["brother_younger_0", "brother_younger_1"], at: point(column: 3.8, row: 7.1))
+            if flags.contains(.chapter4Escaped) {
+                makeBrothersClear()
+            } else {
+                jiro.alpha = 0.3
+            }
+            addZone(column: 1.5, row: 8.3, width: 3, height: 1.3, interactable: .brothers, anchor: (3.1, 5.7))
+        }
+
+        // 第5章から: カウンターの貸出カードの箱を調べられる
+        if flags.contains(.chapter4Cleared) {
+            addZone(column: 9.6, row: 7.4, width: 1.4, height: 1.0, interactable: .cardBox, anchor: (9.4, 5.9))
+        }
+        // 第5章: おフミさんに聞いたあと、すみの棚のそばに小さな影があらわれる
+        if flags.contains(.chapter5AskedFumi) && !flags.contains(.chapter5SawShadow) {
+            showShadow()
+        }
+
+        // 終章: 本の中から一緒に戻ってきたはる
+        if flags.contains(.finaleFoundHaru) && !flags.contains(.finaleFumiPassed) {
+            showHaru()
+        }
+
+        // エピローグのあと: 入口に、つぎのお客さん
+        if flags.contains(.epilogueCleared) {
+            showNewcomer(animated: false)
         }
     }
 
@@ -356,6 +419,116 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
         sachi.removeFromParent()
     }
 
+    // MARK: - タイチとジロ
+
+    /// 読み合わせを終えて、ジロの姿がはっきりする
+    func makeBrothersClear() {
+        jiro.alpha = 0.92
+    }
+
+    /// 兄弟がそろって成仏する
+    func ascendBrothers() async {
+        removeZones { $0 == .brothers }
+        for ghost in [taichi, jiro] {
+            ghost.removeAction(forKey: "float")
+            sparkleBurst(around: CGPoint(x: ghost.position.x, y: ghost.position.y + 8), count: 10)
+            ghost.run(.group([
+                .moveBy(x: 0, y: 28, duration: 2.4),
+                .sequence([.wait(forDuration: 0.6), .fadeOut(withDuration: 1.8)]),
+            ]), withKey: "ascend")
+        }
+        await run(.wait(forDuration: 2.5), on: self)
+        taichi.removeFromParent()
+        jiro.removeFromParent()
+    }
+
+    // MARK: - 消えた本
+
+    /// 本をかかえた小さな影が、すみの棚のそばにあらわれる
+    func showShadow() {
+        guard shadowGirl.parent == nil else { return }
+        setUpGhost(shadowGirl, frames: ["haru_shadow_0", "haru_shadow_1"], at: point(column: 13, row: 8.6))
+        shadowGirl.childNode(withName: "halo")?.removeFromParent()
+        shadowGirl.childNode(withName: "shine")?.alpha = 0.3
+        shadowGirl.alpha = 0
+        shadowGirl.run(.fadeAlpha(to: 0.75, duration: 1.2))
+        addZone(column: 12.2, row: 8.0, width: 1.6, height: 1.2, interactable: .shadow, anchor: (13, 7.0))
+    }
+
+    /// 近づくと、影はふっと消える
+    func vanishShadow() async {
+        removeZones { $0 == .shadow }
+        shadowGirl.removeAction(forKey: "float")
+        await run(.group([.fadeOut(withDuration: 0.5), .moveBy(x: 6, y: 0, duration: 0.5)]), on: shadowGirl)
+        shadowGirl.removeFromParent()
+    }
+
+    // MARK: - はる
+
+    func showHaru() {
+        guard haru.parent == nil else { return }
+        setUpGhost(haru, frames: ["haru_normal_0", "haru_normal_1"], at: point(column: 5.2, row: 9.6))
+        addZone(column: 4.2, row: 9.7, width: 1.8, height: 1.3, interactable: .haru, anchor: (5.2, 8.2))
+    }
+
+    func makeHaruHappy() {
+        animateGhost(haru, frames: ["haru_happy_0", "haru_happy_1"])
+    }
+
+    /// はるがおフミさんのとなりへ行く
+    func walkHaruToFumi() async {
+        removeZones { $0 == .haru }
+        await run(.move(to: point(column: 6.6, row: 9.2), duration: 1.2), on: haru)
+        haru.zPosition = Self.depth(forBaseY: haru.position.y)
+    }
+
+    /// おフミさんとはるが、一緒に成仏する
+    func ascendFumiAndHaru() async {
+        removeZones { $0 == .fumi || $0 == .haru }
+        for ghost in [fumi, haru] {
+            ghost.removeAction(forKey: "float")
+            sparkleBurst(around: CGPoint(x: ghost.position.x, y: ghost.position.y + 8), count: 16)
+            ghost.run(.group([
+                .moveBy(x: 0, y: 36, duration: 3.2),
+                .sequence([.wait(forDuration: 1.0), .fadeOut(withDuration: 2.2)]),
+            ]), withKey: "ascend")
+        }
+        await run(.wait(forDuration: 3.3), on: self)
+        fumi.removeFromParent()
+        haru.removeFromParent()
+    }
+
+    // MARK: - エピローグ
+
+    /// 雨がやんで、朝になる。歩き回っていた幽霊たちも、どこかへ帰っていく
+    func makeMorning() {
+        nightOverlay?.color = SKColor(red: 1.0, green: 0.96, blue: 0.88, alpha: 1)
+        for window in windows {
+            window.removeAllActions()
+            window.texture = Self.texture("sun_window")
+        }
+        for glow in lampGlows {
+            glow.removeAllActions()
+            glow.alpha = 0.2
+        }
+        for walker in walkers {
+            walker.body.removeFromParent()
+        }
+        walkers = []
+        removeZones { if case .wanderer = $0 { return true } else { return false } }
+    }
+
+    /// 入口に、つぎのお客さんが立っている
+    func showNewcomer(animated: Bool) {
+        guard newcomer.parent == nil else { return }
+        setUpGhost(newcomer, frames: ["newcomer_0", "newcomer_1"], at: point(column: 10.4, row: 12.1))
+        addZone(column: 9.6, row: 11.4, width: 1.6, height: 1.3, interactable: .newcomer, anchor: (10.4, 10.7))
+        if animated {
+            newcomer.alpha = 0
+            newcomer.run(.fadeAlpha(to: 0.92, duration: 1.6))
+        }
+    }
+
     // MARK: - 歩き回る幽霊
 
     private func buildWanderers() {
@@ -472,6 +645,11 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
         ribbon.position = CGPoint(x: 28, y: -10)
         ribbon.zPosition = 1
         cornerShelfNode.addChild(ribbon)
+    }
+
+    /// すみの棚から、しおりを抜き出す
+    func removeShelvedBookmark() {
+        cornerShelfNode?.childNode(withName: "bookmark")?.removeFromParent()
     }
 
     // MARK: - 演出

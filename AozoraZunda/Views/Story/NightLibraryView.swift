@@ -16,9 +16,12 @@ struct NightLibraryView: View {
     @State private var melosScene: MelosScene?
     @State private var nekoScene: NekoScene?
     @State private var gingaScene: GingaScene?
+    @State private var yamanekoScene: YamanekoScene?
+    @State private var tebukuroScene: TebukuroScene?
+    @State private var showsGhostBook = false
 
     private enum Chapter {
-        case prologue, chapter1, chapter2, chapter3
+        case prologue, chapter1, chapter2, chapter3, chapter4, chapter5, finale
     }
 
     init(story: StoryStore, leave: @escaping () -> Void) {
@@ -31,6 +34,10 @@ struct NightLibraryView: View {
             || (story.has(.prologueCleared) && !story.has(.chapter1Started))
             || (story.has(.chapter1Cleared) && !story.has(.chapter2Started))
             || (story.has(.chapter2Cleared) && !story.has(.chapter3Started))
+            || (story.has(.chapter3Cleared) && !story.has(.chapter4Started))
+            || (story.has(.chapter4Cleared) && !story.has(.chapter5Started))
+            || (story.has(.chapter5Cleared) && !story.has(.finaleStarted))
+            || (story.has(.finaleCleared) && !story.has(.epilogueCleared))
         runner.setBlackedOut(startsChapter)
         _runner = State(initialValue: runner)
     }
@@ -43,8 +50,14 @@ struct NightLibraryView: View {
             .chapter1
         } else if !story.has(.chapter2Cleared) {
             .chapter2
-        } else {
+        } else if !story.has(.chapter3Cleared) {
             .chapter3
+        } else if !story.has(.chapter4Cleared) {
+            .chapter4
+        } else if !story.has(.chapter5Cleared) {
+            .chapter5
+        } else {
+            .finale
         }
     }
 
@@ -108,7 +121,44 @@ struct NightLibraryView: View {
         )
     }
 
-    private var isInputEnabled: Bool { !runner.isRunning && !showsItems }
+    private var chapter4: Chapter4Events {
+        Chapter4Events(
+            runner: runner,
+            story: story,
+            library: scene,
+            openBook: { [self] in
+                let book = YamanekoScene()
+                yamanekoScene = book
+                return book
+            },
+            closeBook: { [self] in yamanekoScene = nil },
+            book: { [self] in yamanekoScene },
+            leave: leave
+        )
+    }
+
+    private var chapter5: Chapter5Events {
+        Chapter5Events(runner: runner, story: story, library: scene, leave: leave)
+    }
+
+    private var finale: FinaleEvents {
+        let story = story
+        return FinaleEvents(
+            runner: runner,
+            story: story,
+            library: scene,
+            openBook: { [self] in
+                let book = TebukuroScene(flags: story.flags)
+                tebukuroScene = book
+                return book
+            },
+            closeBook: { [self] in tebukuroScene = nil },
+            book: { [self] in tebukuroScene },
+            leave: leave
+        )
+    }
+
+    private var isInputEnabled: Bool { !runner.isRunning && !showsItems && !showsGhostBook }
 
     private var libraryObjective: String {
         switch chapter {
@@ -116,6 +166,9 @@ struct NightLibraryView: View {
         case .chapter1: Chapter1Events.objective(story)
         case .chapter2: Chapter2Events.objective(story)
         case .chapter3: Chapter3Events.objective(story)
+        case .chapter4: Chapter4Events.objective(story)
+        case .chapter5: Chapter5Events.objective(story)
+        case .finale: FinaleEvents.objective(story)
         }
     }
 
@@ -157,6 +210,28 @@ struct NightLibraryView: View {
                 ) { interactable in
                     interactInGinga(with: interactable)
                 }
+            } else if let yamanekoScene {
+                WalkGameView(
+                    scene: yamanekoScene,
+                    idleMessage: Chapter4Events.bookObjective(yamanekoScene),
+                    isInputEnabled: isInputEnabled
+                ) { interactable in
+                    interactInYamaneko(with: interactable)
+                }
+                .overlay(alignment: .topTrailing) {
+                    ReadAlongMeter(progress: yamanekoScene.progress)
+                        .padding(.top, 64)
+                        .padding(.trailing, 16)
+                        .allowsHitTesting(false)
+                }
+            } else if let tebukuroScene {
+                WalkGameView(
+                    scene: tebukuroScene,
+                    idleMessage: FinaleEvents.bookObjective(story),
+                    isInputEnabled: isInputEnabled
+                ) { interactable in
+                    interactInTebukuro(with: interactable)
+                }
             } else {
                 WalkGameView(
                     scene: scene,
@@ -169,19 +244,39 @@ struct NightLibraryView: View {
         }
         .overlay(alignment: .bottomLeading) {
             if isInputEnabled {
-                Button {
-                    showsItems = true
-                } label: {
-                    Text("もちもの")
-                        .font(.pixel(15))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(RetroWindowBackground())
+                HStack(spacing: 10) {
+                    Button {
+                        showsItems = true
+                    } label: {
+                        Text("もちもの")
+                            .font(.pixel(15))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(RetroWindowBackground())
+                    }
+                    .buttonStyle(.plain)
+                    if story.has(.prologueChildPassed) {
+                        Button {
+                            showsGhostBook = true
+                        } label: {
+                            Text("ずかん")
+                                .font(.pixel(15))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(RetroWindowBackground())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .buttonStyle(.plain)
                 .padding(.leading, 24)
                 .padding(.bottom, 16)
+            }
+        }
+        .overlay {
+            if showsGhostBook {
+                GhostBookView(story: story) { showsGhostBook = false }
             }
         }
         .overlay {
@@ -206,6 +301,15 @@ struct NightLibraryView: View {
             case .chapter3:
                 let chapter3 = chapter3
                 runner.run { await chapter3.arrive() }
+            case .chapter4:
+                let chapter4 = chapter4
+                runner.run { await chapter4.arrive() }
+            case .chapter5:
+                let chapter5 = chapter5
+                runner.run { await chapter5.arrive() }
+            case .finale:
+                let finale = finale
+                runner.run { await finale.arrive() }
             }
         }
         .onChange(of: runner.isRunning) { _, isRunning in
@@ -219,6 +323,9 @@ struct NightLibraryView: View {
         let chapter1 = chapter1
         let chapter2 = chapter2
         let chapter3 = chapter3
+        let chapter4 = chapter4
+        let chapter5 = chapter5
+        let finale = finale
         let chapter = chapter
         if case .wanderer(let wanderer) = interactable {
             talk(to: wanderer)
@@ -232,13 +339,31 @@ struct NightLibraryView: View {
                 case .chapter1: await chapter1.talkToFumi()
                 case .chapter2: await chapter2.talkToFumi()
                 case .chapter3: await chapter3.talkToFumi()
+                case .chapter4: await chapter4.talkToFumi()
+                case .chapter5: await chapter5.talkToFumi()
+                case .finale: await finale.talkToFumi()
                 }
             case .child: await prologue.talkToChild()
             case .taku: await chapter1.talkToTaku()
             case .takuBookmark: await chapter1.pickUpTakuBookmark()
             case .tama: await chapter2.talkToTama()
             case .sachi: await chapter3.talkToSachi()
-            case .bookshelf(let index): await prologue.examineShelf(index)
+            case .brothers: await chapter4.talkToBrothers()
+            case .cardBox: await chapter5.cardBox()
+            case .shadow: await chapter5.shadow()
+            case .haru: await finale.talkToHaru()
+            case .newcomer: await finale.talkToNewcomer()
+            case .bookshelf(let index):
+                switch chapter {
+                case .chapter5 where index == NightLibraryInteractable.cornerShelf:
+                    await chapter5.cornerShelf()
+                case .finale where index == NightLibraryInteractable.cornerShelf:
+                    await finale.cornerShelf()
+                case .finale:
+                    await finale.otherShelf()
+                default:
+                    await prologue.examineShelf(index)
+                }
             case .pictureBookShelf: await prologue.examinePictureBookShelf()
             case .bookmark: await prologue.pickUpBookmark()
             case .wanderer: break
@@ -248,6 +373,9 @@ struct NightLibraryView: View {
                 case .chapter1: await chapter1.exit()
                 case .chapter2: await chapter2.exit()
                 case .chapter3: await chapter3.exit()
+                case .chapter4: await chapter4.exit()
+                case .chapter5: await chapter5.exit()
+                case .finale: await finale.exit()
                 }
             }
         }
@@ -310,6 +438,59 @@ struct NightLibraryView: View {
             case .author: await chapter3.author()
             }
         }
+    }
+}
+
+extension NightLibraryView {
+    private func interactInYamaneko(with interactable: YamanekoInteractable) {
+        let chapter4 = chapter4
+        runner.run {
+            switch interactable {
+            case .door(let index): await chapter4.door(index)
+            case .doorway(let index): await chapter4.doorway(index)
+            case .station(let station): await chapter4.station(station)
+            case .signboard: await chapter4.signboard()
+            }
+        }
+    }
+
+    private func interactInTebukuro(with interactable: TebukuroInteractable) {
+        let finale = finale
+        runner.run {
+            switch interactable {
+            case .foxes: await finale.foxes()
+            case .footprints(let index): await finale.footprints(index)
+            case .glimpse: await finale.glimpse()
+            case .sign(let index): await finale.sign(index)
+            case .hatShop: await finale.hatShop()
+            case .lullabyWindow: await finale.lullabyWindow()
+            case .haru: await finale.haruInBook()
+            }
+        }
+    }
+}
+
+/// 兄弟の読み合わせの進み具合（ジロの姿がはっきりしていく）
+private struct ReadAlongMeter: View {
+    let progress: ReadAlongProgress
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 6) {
+            Text("読み合わせ")
+                .font(.pixel(12))
+                .foregroundStyle(.white)
+            HStack(spacing: 4) {
+                ForEach(0..<ReadAlongProgress.total, id: \.self) { index in
+                    Image(systemName: "music.note")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(index < progress.count ? Color(red: 0.62, green: 0.78, blue: 1.0) : Color(white: 0.35))
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(RetroWindowBackground())
+        .animation(.easeOut(duration: 0.3), value: progress.count)
     }
 }
 

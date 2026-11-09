@@ -83,6 +83,11 @@ enum NightWanderer: String, CaseIterable {
         var extra: [String] = []
         switch self {
         case .bookworm:
+            if flags.contains(.finaleFumiPassed) {
+                extra.append("おフミさん、行ってしもうたか。……返ってきた本、わしも読ませてもらうかのう")
+            } else if flags.contains(.chapter5ReadCard) {
+                extra.append("すみの棚の一冊か。……あれは、わしがここに来たころから、ずうっと貸出中じゃ")
+            }
             if flags.contains(.chapter1Cleared) {
                 extra.append("閲覧机の坊主、最近見かけんのう。……そうか、読み終えたか。ええことじゃ")
             }
@@ -93,6 +98,11 @@ enum NightWanderer: String, CaseIterable {
                 "おぬし、字を見ると眠くなるそうじゃな。……わしもじゃ。だから死んでも読み終わらん",
             ]
         case .shosei:
+            if flags.contains(.epilogueCleared) {
+                extra.append("新しい司書さん、よろしくお願いします。……え、ぼくの試験勉強も手伝ってくれるの？")
+            } else if flags.contains(.chapter4Cleared) {
+                extra.append("あの兄弟、試験勉強のじゃまだったけど……いなくなると、さみしいものだね")
+            }
             if flags.contains(.chapter2Cleared) {
                 extra.append("猫の声が聞こえなくなったね。静かすぎるのも、少しさみしい")
             }
@@ -102,6 +112,11 @@ enum NightWanderer: String, CaseIterable {
                 "きみ、ずんだもんというのか。……ずんだ餅は、生きているうちに食べておけばよかった",
             ]
         case .haikara:
+            if flags.contains(.finaleFumiPassed) {
+                extra.append("待ち合わせの人は、まだ来ないわ。……でも、待つのも悪くないって、おフミさんを見ていて思ったの")
+            } else if flags.contains(.chapter5AskedFumi) {
+                extra.append("三つ編みの小さな子が、おフミさんのところに通っていたの。……ずっと、ずっと昔よ")
+            }
             if flags.contains(.chapter3Cleared) {
                 extra.append("手紙を持ったお嬢さん、届けられたのね。……うらやましいわ")
             }
@@ -111,7 +126,10 @@ enum NightWanderer: String, CaseIterable {
                 "わたくし、ここで待ち合わせをしているの。……ずいぶん昔から",
             ]
         case .wisp:
-            return [
+            if flags.contains(.chapter5SawShadow) && !flags.contains(.finaleFumiPassed) {
+                extra.append("……ぽわ。（すみの棚のほうを、じっと照らしているのだ）")
+            }
+            return extra + [
                 "……ぽわ。",
                 "……ぽわわ。（なんだか、あたたかいのだ）",
                 "……（ずんだもんのまわりを、くるりと一周した）",
