@@ -163,6 +163,11 @@ struct Chapter4Events {
         await runner.say(.zunda, "入っちゃだめなところに、これから入るのだ……？")
     }
 
+    /// 扉の裏にも札があるか（くぐったときに読む）
+    static func hasBackText(_ index: Int) -> Bool {
+        orders.indices.contains(index) && orders[index].back != nil
+    }
+
     // MARK: 扉
 
     func door(_ index: Int) async {

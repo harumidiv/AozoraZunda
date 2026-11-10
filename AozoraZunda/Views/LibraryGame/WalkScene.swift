@@ -34,6 +34,8 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     private(set) var focus: Interactable?
     /// 調べるとストーリーが進むものか。true のものには、ふつうとは別の金色の吹き出しを出す
     var isStoryTarget: ((Interactable) -> Bool)?
+    /// いま調べられるか。false のものは吹き出しを出さず、調べられないようにする（開けたあとの扉など）
+    var isAvailable: ((Interactable) -> Bool)?
     private var bubbleTextureName = "bubble"
     /// プレイヤーの絵の名前の頭につける文字（本の中で猫になるときなどに変える）
     var playerSpritePrefix = "player"
@@ -69,6 +71,17 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
             let position = follow.node.position
             rect.origin = CGPoint(x: position.x - rect.width / 2, y: position.y - rect.height + 3)
             anchor = CGPoint(x: position.x, y: position.y + follow.anchorRise)
+        }
+
+        /// 調べる相手の足元のあたり。吹き出しは頭の上に出ているので、それより少し下とみなす
+        var target: CGPoint {
+            follow?.node.position ?? CGPoint(x: anchor.x, y: anchor.y - 20)
+        }
+
+        /// 前の範囲のほかに、相手の上下左右どこに立っても話しかけられる範囲
+        var aroundTarget: CGRect {
+            let target = target
+            return CGRect(x: target.x - 22, y: target.y - 20, width: 44, height: 40)
         }
     }
     private var isSetUp = false
@@ -730,7 +743,12 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
             zones[index].track()
         }
         let feet = player.position
-        let zone = zones.first { $0.rect.contains(feet) }
+        let available = zones.filter { isAvailable?($0.interactable) ?? true }
+        // 決められた範囲に入っていればそれを、なければ（入るだけで進むもの以外は）まわりに立っている相手のうち近いものを選ぶ
+        let zone = available.first { $0.rect.contains(feet) }
+            ?? available
+            .filter { !$0.interactable.triggersOnEnter && $0.aroundTarget.contains(feet) }
+            .min { hypot($0.target.x - feet.x, $0.target.y - feet.y) < hypot($1.target.x - feet.x, $1.target.y - feet.y) }
         if let zone {
             bubble.isHidden = false
             let textureName = isStoryTarget?(zone.interactable) == true ? "bubble_story" : "bubble"
@@ -751,8 +769,7 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
             bubble.isHidden = true
         }
         if let zone, !zone.interactable.triggersOnEnter {
-            // 吹き出しは頭の上に出ているので、足元はそれより少し下とみなす
-            focusTarget = zone.follow?.node.position ?? CGPoint(x: zone.anchor.x, y: zone.anchor.y - 20)
+            focusTarget = zone.target
         } else {
             focusTarget = nil
         }

@@ -98,6 +98,20 @@ extension Chapter3Events {
         case .doorway, .giovanni, .campanella: return false
         }
     }
+
+    /// 開けたあとの扉や、もう何も起きない車両のつなぎ目は、調べられないようにする
+    static func isAvailable(_ interactable: GingaInteractable, story: StoryStore, scene: GingaScene) -> Bool {
+        switch interactable {
+        case .door(let index):
+            return !scene.openedDoors.contains(index)
+        case .doorway(let index):
+            // 手紙を置き忘れて先へ進もうとしたときと、終点に着いたときだけ
+            if let car = scene.letterCar, car <= index { return true }
+            return index == 2 && scene.isCarryingLetter && !story.has(.chapter3LetterDelivered)
+        default:
+            return true
+        }
+    }
 }
 
 extension Chapter4Events {
@@ -107,6 +121,16 @@ extension Chapter4Events {
         case .door(let index): !scene.openedDoors.contains(index)
         case .station(let station): !scene.doneStations.contains(station)
         case .doorway, .signboard: false
+        }
+    }
+
+    /// 開けたあとの扉や、もう裏を読んだ扉のくぐり口は、調べられないようにする
+    static func isAvailable(_ interactable: YamanekoInteractable, story: StoryStore, scene: YamanekoScene) -> Bool {
+        switch interactable {
+        case .door(6): !story.has(.chapter4Escaped)
+        case .door(let index): !scene.openedDoors.contains(index)
+        case .doorway(let index): !scene.passedDoorways.contains(index) && hasBackText(index)
+        default: true
         }
     }
 }

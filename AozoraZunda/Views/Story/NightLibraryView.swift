@@ -128,6 +128,10 @@ struct NightLibraryView: View {
                     guard let book else { return false }
                     return Chapter3Events.isStoryTarget($0, story: story, scene: book)
                 }
+                book.isAvailable = { [weak book] in
+                    guard let book else { return false }
+                    return Chapter3Events.isAvailable($0, story: story, scene: book)
+                }
                 gingaScene = book
                 return book
             },
@@ -147,6 +151,10 @@ struct NightLibraryView: View {
                 book.isStoryTarget = { [weak book] in
                     guard let book else { return false }
                     return Chapter4Events.isStoryTarget($0, scene: book)
+                }
+                book.isAvailable = { [weak book, story] in
+                    guard let book else { return false }
+                    return Chapter4Events.isAvailable($0, story: story, scene: book)
                 }
                 yamanekoScene = book
                 return book
