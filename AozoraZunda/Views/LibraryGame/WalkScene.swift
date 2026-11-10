@@ -32,6 +32,9 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     /// 調べられるものの前に立ったとき・離れたときに呼ばれる
     var onFocusChange: ((Interactable?) -> Void)?
     private(set) var focus: Interactable?
+    /// 調べるとストーリーが進むものか。true のものには、ふつうとは別の金色の吹き出しを出す
+    var isStoryTarget: ((Interactable) -> Bool)?
+    private var bubbleTextureName = "bubble"
     /// プレイヤーの絵の名前の頭につける文字（本の中で猫になるときなどに変える）
     var playerSpritePrefix = "player"
     /// 画面下でホームインジケーターなどに隠れる高さ（画面上のポイント）。マップの下端がその上に来るまでカメラを動かせる
@@ -730,6 +733,11 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
         let zone = zones.first { $0.rect.contains(feet) }
         if let zone {
             bubble.isHidden = false
+            let textureName = isStoryTarget?(zone.interactable) == true ? "bubble_story" : "bubble"
+            if textureName != bubbleTextureName {
+                bubbleTextureName = textureName
+                bubble.texture = Self.texture(textureName)
+            }
             // 吹き出しはその場で上下に 2 ドット揺れるので、それより大きくずれたときだけ置き直す（動く範囲用）
             if bubble.position.x != zone.anchor.x || abs(bubble.position.y - zone.anchor.y) > 2.5 {
                 bubble.removeAllActions()
