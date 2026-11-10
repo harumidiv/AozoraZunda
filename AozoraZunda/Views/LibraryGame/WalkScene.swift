@@ -42,8 +42,8 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     let rows: Int
     private let playerStart: (column: CGFloat, row: CGFloat)
     private static var walkSpeed: CGFloat { 72 }
-    /// タップした場所へは、遠くてもこの時間で着くように速さを決める
-    private static var tapWalkDuration: CGFloat { 0.3 }
+    /// タップした場所へ向かうときの速さ（距離に関係なく一定）。1秒で約20マス
+    private static var tapWalkSpeed: CGFloat { 320 }
 
     private let world = SKNode()
     private let player = SKSpriteNode()
@@ -106,6 +106,8 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     }
 
     private var facing = Facing.up
+    /// いま前に立っている調べられるものの足元のあたり。止まったときにそちらを向く
+    private var focusTarget: CGPoint?
     private var playerTextureName = ""
     private var walkTime: TimeInterval = 0
     private var lastUpdate: TimeInterval?
@@ -348,8 +350,25 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
             walkTime += delta * min(3, max(1, speed / Self.walkSpeed))
         } else {
             walkTime = 0
+            if let focusTarget {
+                face(toward: focusTarget)
+            }
         }
         updatePlayerTexture(isMoving: isMoving)
+    }
+
+    /// 止まっているときに、指定した地点のほうを向く
+    private func face(toward target: CGPoint) {
+        let dx = target.x - player.position.x
+        let dy = target.y - player.position.y
+        guard hypot(dx, dy) > 2 else { return }
+        if abs(dx) > abs(dy) {
+            facing = .side
+            player.xScale = dx < 0 ? -1 : 1
+        } else {
+            facing = dy > 0 ? .up : .down
+            player.xScale = 1
+        }
     }
 
     override func didSimulatePhysics() {
@@ -493,13 +512,7 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
             waypoints.append(end)
         }
         path = waypoints
-        var length: CGFloat = 0
-        var from = start
-        for point in waypoints {
-            length += hypot(point.x - from.x, point.y - from.y)
-            from = point
-        }
-        pathSpeed = max(Self.walkSpeed, length / Self.tapWalkDuration)
+        pathSpeed = Self.tapWalkSpeed
         stuckTime = 0
         destinationMarker.position = end
         destinationMarker.isHidden = false
@@ -728,6 +741,12 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
             }
         } else {
             bubble.isHidden = true
+        }
+        if let zone, !zone.interactable.triggersOnEnter {
+            // 吹き出しは頭の上に出ているので、足元はそれより少し下とみなす
+            focusTarget = zone.follow?.node.position ?? CGPoint(x: zone.anchor.x, y: zone.anchor.y - 20)
+        } else {
+            focusTarget = nil
         }
         let newFocus = zone?.interactable
         if newFocus != focus {
