@@ -5,7 +5,7 @@ enum LibraryInteractable: WalkInteractable {
     /// かな行ごとの本棚（label は "あ"〜"わ"）
     case shelf(label: String)
     case librarian
-    /// 入口。ずんだもんの部屋に帰る
+    /// 入口。町に出る
     case exit
 
     var prompt: String {
@@ -15,7 +15,7 @@ enum LibraryInteractable: WalkInteractable {
         case .librarian:
             "司書さん ── 作品名や作家名で本をさがしてくれる"
         case .exit:
-            "入口 ── ずんだもんの部屋に帰るのだ"
+            "入口 ── 町に出るのだ"
         }
     }
 
@@ -23,7 +23,7 @@ enum LibraryInteractable: WalkInteractable {
         switch self {
         case .shelf: "しらべる"
         case .librarian: "はなす"
-        case .exit: "かえる"
+        case .exit: "でる"
         }
     }
 

@@ -3,14 +3,14 @@ import SwiftUI
 /// 青空文庫の作品をさがす画面。図書館の中を歩いて本棚や司書さんを調べる
 struct CatalogView: View {
     @Environment(CatalogStore.self) private var catalog
-    /// ずんだもんの部屋へ帰る
+    /// 町に出る
     let goToRoom: () -> Void
     @State private var path = NavigationPath()
     @State private var scene = LibraryScene()
 
     var body: some View {
         NavigationStack(path: $path) {
-            WalkGameView(scene: scene, idleMessage: "画面をドラッグして歩こう。本棚や司書さんの前で「しらべる」。下の入口から部屋に帰れる") { interactable in
+            WalkGameView(scene: scene, idleMessage: "行きたい場所をタップして歩こう。本棚や司書さんの前で「しらべる」。下の入口から町に出られる") { interactable in
                 switch interactable {
                 case .shelf(let label):
                     path.append(ShelfRoute(label: label))

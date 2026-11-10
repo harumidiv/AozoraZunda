@@ -4,6 +4,7 @@ import SwiftUI
 struct BookshelfView: View {
     @Environment(CatalogStore.self) private var catalog
     @Environment(LibraryStore.self) private var library
+    @Environment(ErrandStore.self) private var errands
     let label: String
     /// 司書さんに案内されたときは、この作家の仕切り板の段から表示する
     var initialAuthorID: String?
@@ -11,6 +12,8 @@ struct BookshelfView: View {
     @State private var selection: ShelfItem.ID?
     @State private var readingBook: CatalogBook?
     @State private var errorMessage: String?
+    /// 町の人に届ける本を借りたときのひとこと
+    @State private var borrowNote: String?
 
     var body: some View {
         CatalogContent {
@@ -93,6 +96,9 @@ struct BookshelfView: View {
                 } else if let errorMessage {
                     Text(errorMessage)
                         .foregroundStyle(Color(red: 1, green: 0.7, blue: 0.7))
+                } else if let borrowNote {
+                    Text(borrowNote)
+                        .foregroundStyle(Color(red: 1, green: 0.85, blue: 0.6))
                 }
                 HStack(spacing: 20) {
                     WindowChoice(title: "よむ") { read(book) }
@@ -101,6 +107,12 @@ struct BookshelfView: View {
                         ChoiceLabel(title: "しらべる")
                     }
                     .buttonStyle(.plain)
+                    if errands.isLookingForBook && errands.carrying?.id != book.id {
+                        WindowChoice(title: "かりる") {
+                            errands.borrow(book)
+                            borrowNote = errands.borrowNote(for: book)
+                        }
+                    }
                     WindowChoice(title: "もどす") { select(nil) }
                 }
             }
@@ -113,6 +125,7 @@ struct BookshelfView: View {
 
     private func select(_ id: ShelfItem.ID?) {
         errorMessage = nil
+        borrowNote = nil
         withAnimation(.spring(duration: 0.25)) {
             selection = id
         }

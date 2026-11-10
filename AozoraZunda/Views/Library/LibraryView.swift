@@ -3,8 +3,14 @@ import SwiftUI
 /// ずんだもんの部屋。歩いて本棚や机を調べ、ドアから図書館へ出かける
 struct LibraryView: View {
     @Environment(LibraryStore.self) private var library
-    /// 図書館へ出かける
+    @Environment(CatalogStore.self) private var catalog
+    @Environment(StoryStore.self) private var story
+    /// ドアから町へ出かける
+    let goOutside: () -> Void
+    /// 図書館へ直接行く（本棚がからっぽのときの案内から）
     let goToLibrary: () -> Void
+    /// 夜まで待って、ストーリーの舞台の夜間図書室へ行く
+    let goToNightLibrary: () -> Void
 
     @State private var path = NavigationPath()
     @State private var scene: RoomScene
@@ -18,9 +24,11 @@ struct LibraryView: View {
         "まくらの下に読みかけの本をかくしているのは、ないしょなのだ",
     ]
 
-    /// startsAtDoor: 図書館から帰ってきたときはドアの前から始める
-    init(startsAtDoor: Bool = false, goToLibrary: @escaping () -> Void) {
+    /// startsAtDoor: 町から帰ってきたときはドアの前から始める
+    init(startsAtDoor: Bool = false, goOutside: @escaping () -> Void, goToLibrary: @escaping () -> Void, goToNightLibrary: @escaping () -> Void) {
+        self.goOutside = goOutside
         self.goToLibrary = goToLibrary
+        self.goToNightLibrary = goToNightLibrary
         _scene = State(initialValue: RoomScene(startsAtDoor: startsAtDoor))
     }
 
@@ -28,7 +36,7 @@ struct LibraryView: View {
         NavigationStack(path: $path) {
             WalkGameView(
                 scene: scene,
-                idleMessage: "ずんだもんの部屋なのだ。画面をドラッグして歩くのだ。下のドアから図書館へ行けるのだ",
+                idleMessage: "ずんだもんの部屋なのだ。行きたい場所をタップすると歩くのだ。下のドアから町へ出かけられるのだ",
                 isInputEnabled: dialog == nil,
                 showsBanner: true
             ) { interactable in
@@ -47,6 +55,7 @@ struct LibraryView: View {
                     dialog = RoomDialog(text: "ふむふむ…なかなかおもしろかったのだ", choices: [close])
                 }
                 tvAd.load()
+                offerStoryBookIfNeeded()
             }
             .task(id: library.sortedBooks.map(\.id)) {
                 // 調べる前から冊数が分かるよう、部屋の本棚に持っている本を並べる
@@ -73,11 +82,53 @@ struct LibraryView: View {
         case .desk:
             dialog = deskDialog()
         case .bed:
-            dialog = RoomDialog(text: Self.bedLines.randomElement() ?? "", choices: [close])
+            dialog = RoomDialog(
+                text: Self.bedLines.randomElement() ?? "",
+                choices: [
+                    GameChoice("夜まで まつ（ストーリー）") {
+                        dialog = nil
+                        goToNightLibrary()
+                    },
+                    close,
+                ]
+            )
         case .tv:
             dialog = tvDialog()
         case .door:
-            goToLibrary()
+            goOutside()
+        }
+    }
+
+    /// 章を終えた朝に、その章の本物の本を読んでみるかたずねる（章ごとに一度だけ）
+    private static let storyBooks: [(cleared: StoryFlag, offered: StoryFlag, bookID: String, text: String)] = [
+        (.chapter1Cleared, .chapter1ReadOffered, "001567", "……メロスの続きが気になって、あんまり眠れなかったのだ。本物の『走れメロス』、読んでみるのだ？"),
+        (.chapter2Cleared, .chapter2ReadOffered, "000789", "……タマと読んだ『吾輩は猫である』、ほんとうはもっと長いのだ。本物、読んでみるのだ？"),
+        (.chapter3Cleared, .chapter3ReadOffered, "000456", "……ジョバンニとカムパネルラ、あのあとどうなったのだ……。本物の『銀河鉄道の夜』、読んでみるのだ？"),
+        (.chapter4Cleared, .chapter4ReadOffered, "043754", "……「わん、わん、ぐゎあ」。思い出し笑いが止まらないのだ。本物の『注文の多い料理店』、声に出して読んでみるのだ？"),
+        (.epilogueCleared, .finaleReadOffered, "000637", "……今日はどれから読むのだ。まずは、はるに読んだ『手袋を買いに』を、もう一回読むのだ？"),
+    ]
+
+    private func offerStoryBookIfNeeded() {
+        guard let offer = Self.storyBooks.first(where: { story.has($0.cleared) && !story.has($0.offered) }) else { return }
+        story.set(offer.offered)
+        dialog = RoomDialog(
+            text: offer.text,
+            choices: [
+                GameChoice("よむ") {
+                    dialog = nil
+                    Task { await openStoryBook(id: offer.bookID) }
+                },
+                GameChoice("あとにする") { dialog = nil },
+            ]
+        )
+    }
+
+    private func openStoryBook(id: String) async {
+        await catalog.loadIfNeeded()
+        if let book = catalog.books.first(where: { $0.id == id }) {
+            path.append(book)
+        } else {
+            dialog = RoomDialog(text: "本が見つからなかったのだ……。図書館の司書さんに聞いてみるのだ", choices: [close])
         }
     }
 

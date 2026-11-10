@@ -1,1 +1,12 @@
 .claude/worktrees/
+
+# macOS
+.DS_Store
+
+# Xcode ユーザー固有の設定・状態
+xcuserdata/
+*.xcuserstate
+
+# ビルド成果物
+build/
+DerivedData/

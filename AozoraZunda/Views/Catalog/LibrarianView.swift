@@ -4,6 +4,7 @@ import SwiftUI
 struct LibrarianView: View {
     @Environment(CatalogStore.self) private var catalog
     @Environment(LibraryStore.self) private var library
+    @Environment(ErrandStore.self) private var errands
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -12,6 +13,8 @@ struct LibrarianView: View {
     @State private var selectedBookID: CatalogBook.ID?
     @State private var readingBook: CatalogBook?
     @State private var errorMessage: String?
+    /// 町の人に届ける本を借りたときのひとこと
+    @State private var borrowNote: String?
     /// セリフを1文字ずつ表示するための状態
     @State private var typedLine = ""
     @State private var typedCount = 0
@@ -46,6 +49,7 @@ struct LibrarianView: View {
                             selectedBookID = selectedBookID == book.id ? nil : book.id
                         }
                         errorMessage = nil
+                        borrowNote = nil
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -163,10 +167,17 @@ struct LibrarianView: View {
     }
 
     private func bookChoices(for book: CatalogBook) -> [GameChoice] {
-        [
+        var choices = [
             GameChoice("よむ", isEnabled: !library.isDownloading(book.id)) { read(book) },
             GameChoice("しらべる", book: book),
         ]
+        if errands.isLookingForBook && errands.carrying?.id != book.id {
+            choices.append(GameChoice("かりて届ける") {
+                errands.borrow(book)
+                borrowNote = errands.borrowNote(for: book)
+            })
+        }
+        return choices
     }
 
     /// 直前にさがした方法（言いなおすときに同じ方法でたずねる）
@@ -227,7 +238,7 @@ struct LibrarianView: View {
         if let selectedBook = selectedBook ?? recommendedBook, library.isDownloading(selectedBook.id) {
             return "（本をとりよせています…）"
         }
-        return errorMessage
+        return errorMessage ?? borrowNote
     }
 
     private var recommendedBook: CatalogBook? {
@@ -267,6 +278,7 @@ struct LibrarianView: View {
 
     private func go(_ next: Step) {
         errorMessage = nil
+        borrowNote = nil
         withAnimation(.spring(duration: 0.3)) {
             selectedBookID = nil
             step = next
