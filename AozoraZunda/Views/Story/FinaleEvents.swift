@@ -251,6 +251,8 @@ struct FinaleEvents {
         await runner.say(.zunda, "これ、はめるのだ。帽子屋さんで買ってきたのだ")
         story.take(.mittens)
         scene.giveMittensToHaru()
+        // ここから、はるとおフミさんを見送るまではピアノの曲
+        runner.music = .finalePiano
         await runner.say(.haru, "…………あったかい")
         await runner.say(.haru, "わたし、はる。……雪の日に、外で遊んだこと、なかったの。いつも窓から見てるだけ")
         await runner.say(.zunda, "はる……！ 貸出カードの、はるなのだ？ おフミさんが、ずっと待ってるのだ")
@@ -281,6 +283,7 @@ struct FinaleEvents {
 
     /// おフミさんとはるの前で、ずんだもんが最後まで読み聞かせる
     private func readAloud() async {
+        runner.music = .finalePiano
         await library.walkHaruToFumi()
         await runner.say(.fumi, "……はるちゃん")
         await runner.say(.haru, "……おフミさん。おそくなって、ごめんなさい")
@@ -341,6 +344,7 @@ struct FinaleEvents {
         story.set(.finaleCleared)
         await runner.blackOut(true, duration: 1.4)
         await runner.chapterTitle("終章 おわり", "最後まで読むのだ")
+        runner.music = nil
         await morning()
     }
 

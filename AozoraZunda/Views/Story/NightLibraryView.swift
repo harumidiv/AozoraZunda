@@ -158,6 +158,25 @@ struct NightLibraryView: View {
         )
     }
 
+    /// いま流す曲。開いている本の曲、本の外なら図書室の曲。物語の大事な場面では、そちらを優先する
+    private var music: StoryMusic {
+        if let music = runner.music {
+            music
+        } else if melosScene != nil {
+            .melos
+        } else if nekoScene != nil {
+            .neko
+        } else if gingaScene != nil {
+            .ginga
+        } else if yamanekoScene != nil {
+            .yamaneko
+        } else if tebukuroScene != nil {
+            .tebukuro
+        } else {
+            .nightLibrary
+        }
+    }
+
     private var isInputEnabled: Bool { !runner.isRunning && !showsItems && !showsGhostBook }
 
     private var libraryObjective: String {
@@ -311,6 +330,9 @@ struct NightLibraryView: View {
                 let finale = finale
                 runner.run { await finale.arrive() }
             }
+        }
+        .onChange(of: music, initial: true) { _, music in
+            MusicPlayer.shared.play(music)
         }
         .onChange(of: runner.isRunning) { _, isRunning in
             // 会話や演出のあいだは、日没までの時間を止める
