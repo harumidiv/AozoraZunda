@@ -36,6 +36,10 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     var isStoryTarget: ((Interactable) -> Bool)?
     /// いま調べられるか。false のものは吹き出しを出さず、調べられないようにする（開けたあとの扉など）
     var isAvailable: ((Interactable) -> Bool)?
+    /// 会話や演出のあいだは、吹き出しを出さない
+    var hidesBubble = false {
+        didSet { updateFocus() }
+    }
     private var bubbleTextureName = "bubble"
     /// プレイヤーの絵の名前の頭につける文字（本の中で猫になるときなどに変える）
     var playerSpritePrefix = "player"
@@ -744,12 +748,14 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
         }
         let feet = player.position
         let available = zones.filter { isAvailable?($0.interactable) ?? true }
-        // 決められた範囲に入っていればそれを、なければ（入るだけで進むもの以外は）まわりに立っている相手のうち近いものを選ぶ
-        let zone = available.first { $0.rect.contains(feet) }
+        // 決められた範囲に入っていればそれを、なければまわりに立っている相手のうち近いものを選ぶ。
+        // 歩き回る相手（幽霊など）は、止まっている相手より後回しにし、まわりの範囲も広げない（通りすがりに反応しないように）
+        let zone = available.first { $0.follow == nil && $0.rect.contains(feet) }
+            ?? available.first { $0.rect.contains(feet) }
             ?? available
-            .filter { !$0.interactable.triggersOnEnter && $0.aroundTarget.contains(feet) }
+            .filter { $0.follow == nil && !$0.interactable.triggersOnEnter && $0.aroundTarget.contains(feet) }
             .min { hypot($0.target.x - feet.x, $0.target.y - feet.y) < hypot($1.target.x - feet.x, $1.target.y - feet.y) }
-        if let zone {
+        if let zone, !hidesBubble {
             bubble.isHidden = false
             let textureName = isStoryTarget?(zone.interactable) == true ? "bubble_story" : "bubble"
             if textureName != bubbleTextureName {
