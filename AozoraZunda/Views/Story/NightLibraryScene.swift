@@ -272,7 +272,7 @@ final class NightLibraryScene: WalkScene<NightLibraryInteractable> {
             addZone(column: 9.6, row: 7.4, width: 1.4, height: 1.0, interactable: .cardBox, anchor: (9.4, 5.9))
         }
         // 第5章: おフミさんに聞いたあと、すみの棚のそばに小さな影があらわれる
-        if flags.contains(.chapter5AskedFumi) && !flags.contains(.chapter5SawShadow) {
+        if flags.contains(.chapter5AskedFumi) && flags.contains(.chapter5HeardOfHaru) && !flags.contains(.chapter5SawShadow) {
             showShadow()
         }
 

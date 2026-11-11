@@ -50,10 +50,20 @@ struct FinaleEvents {
             return "朝の図書室なのだ。……本棚の前へ行ってみるのだ"
         } else if story.has(.finaleFoundHaru) {
             return "はるに声をかけて、本を読んであげるのだ"
-        } else if story.has(.finaleStarted) {
+        } else if isBookReady(story) {
             return "押し花のしおりで、はるのいる本の中へ行くのだ（おフミさんに話しかける）"
+        } else if story.has(.tebukuroBook) {
+            return "昼の図書館でかりた『手袋を買いに』を、すみの棚の隙間に入れるのだ"
+        } else if story.has(.finaleAskedForBook) {
+            return "朝になったら、町の図書館で『手袋を買いに』をかりてくるのだ（出口から部屋に帰る）"
         }
         return "夜の図書室なのだ"
+    }
+
+    /// すみの棚に『手袋を買いに』がもどって、しおりのページから本の中へ行けるか
+    /// （朝に本を借りる流れができる前のセーブデータでは、そのまま行けることにする）
+    static func isBookReady(_ story: StoryStore) -> Bool {
+        story.has(.finaleStarted) && (story.has(.finaleShelvedBook) || !story.has(.finaleAskedForBook))
     }
 
     /// 本の中にいるときの「いまやること」
@@ -75,6 +85,11 @@ struct FinaleEvents {
             await morning()
         } else if story.has(.finaleFoundHaru) && !story.has(.finaleCleared) {
             await runner.say(.fumi, "おかえりなさい。……はるちゃんも、待ってるわ")
+        } else if story.has(.tebukuroBook) && !story.has(.finaleShelvedBook) {
+            await runner.say(.fumi, "おかえりなさい。……ずんだもんちゃん、その青い表紙……")
+            await runner.say(.zunda, "町の図書館で、かりてきたのだ。すみの棚に、入れにいくのだ")
+        } else if story.has(.finaleAskedForBook) && !story.has(.finaleShelvedBook) {
+            await runner.say(.fumi, "おかえりなさい。……町の図書館の本は、まだみたいね")
         } else if !story.has(.finaleCleared) {
             await runner.say(.fumi, "おかえりなさい。……はるちゃんのこと、お願いね")
         }
@@ -102,7 +117,34 @@ struct FinaleEvents {
         await runner.say(.zunda, "ずんだもんが、迎えに行ってくるのだ")
         await runner.say(.fumi, "……わたしは、ここで待ってる。あの子が帰ってくる場所は、ここだから")
         story.set(.finaleStarted)
-        let choice = await runner.choose(.fumi, "……お願いできる？", ["本の中へ", "ちょっと待つのだ"])
+        await runner.say(.fumi, "……でもね、ずんだもんちゃん。しおりだけじゃ、本の中へは行けないの。しおりをはさむ本が、いるのよ")
+        await runner.say(.fumi, "あの本は、はるちゃんと一緒に、どこかへ行ってしまった。すみの棚は、ずっと一冊ぶん空いたまま")
+        await runner.say(.zunda, "…………")
+        await runner.say(.zunda, "……町の図書館なのだ")
+        await runner.say(.fumi, "え？")
+        await runner.say(.zunda, "昼の、町の図書館なのだ。あそこなら、『手袋を買いに』があるかもしれないのだ")
+        await runner.say(.zunda, "タクのときも、ちゃんとあったのだ。……ずんだもん、このごろ、毎日あそこに行ってるのだ")
+        await runner.say(.fumi, "……ずんだもんちゃんが、毎日、図書館に？")
+        await runner.say(.fumi, "…………ふふ。……そう。そうなのね")
+        await runner.say(.fumi, "じゃあ、お願い。あの棚に、本を返してあげて。……あの子のかわりに")
+        story.set(.finaleAskedForBook)
+        await runner.blackOut(true, duration: 1.0)
+        await runner.narrate("朝になったら、町の図書館で\n『手袋を買いに』をかりてくるのだ。")
+        leave()
+    }
+
+    /// 昼の図書館で借りてきた本を、すみの棚の隙間に入れる
+    private func shelveBook() async {
+        await runner.say(.zunda, "おフミさん。……これ、町の図書館でかりてきたのだ。『手袋を買いに』なのだ")
+        await runner.say(.fumi, "…………")
+        await runner.say(.zunda, "すみの棚に、入れるのだ。……すっ")
+        story.take(.tebukuroBook)
+        story.set(.finaleShelvedBook)
+        await runner.narrate("一冊ぶんの隙間に、\n青い表紙の本が、ぴたりとおさまったのだ。")
+        await runner.say(.fumi, "……何十年ぶりかしら。この棚が、ちゃんと埋まったの")
+        await runner.say(.zunda, "しおりは、子狐が町に来たページにはさむのだ。……はるが、読みかけのところ")
+        await runner.say(.fumi, "……ありがとう、ずんだもんちゃん")
+        let choice = await runner.choose(.fumi, "しおりのページから、はるちゃんのところへ……お願いできる？", ["本の中へ", "ちょっと待つのだ"])
         if choice == 0 {
             await enterBook()
         }
@@ -111,6 +153,12 @@ struct FinaleEvents {
     func talkToFumi() async {
         if story.has(.finaleFoundHaru) {
             await runner.say(.fumi, "はるちゃんに、読んであげて。……わたしも、一緒に聞くわ")
+        } else if !Self.isBookReady(story) {
+            if story.has(.tebukuroBook) {
+                await shelveBook()
+            } else {
+                await runner.say(.fumi, "町の図書館に、あの本……あるといいわね")
+            }
         } else {
             let choice = await runner.choose(.fumi, "しおりのページから、本の中へ行ける？", ["本の中へ", "まだ"])
             if choice == 0 {
@@ -122,6 +170,10 @@ struct FinaleEvents {
     func cornerShelf() async {
         if story.has(.finaleCleared) {
             await epilogueEnding()
+        } else if story.has(.tebukuroBook) && !story.has(.finaleShelvedBook) {
+            await shelveBook()
+        } else if story.has(.finaleShelvedBook) {
+            await runner.say(.zunda, "『手袋を買いに』が、ちゃんとおさまってるのだ。押し花のしおりが、のぞいてるのだ")
         } else {
             await runner.say(.zunda, "一冊ぶんの隙間なのだ。……ここに、本を返してもらうのだ")
         }

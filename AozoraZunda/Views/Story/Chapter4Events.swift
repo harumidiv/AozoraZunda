@@ -67,6 +67,10 @@ struct Chapter4Events {
             return "タイチとジロに声をかけるのだ"
         } else if story.has(.orderKey) {
             return "兄弟と一緒に、本の中の山猫軒へ行くのだ"
+        } else if story.has(.anpan) {
+            return "ミツさんのあんパンを、兄弟にそなえるのだ"
+        } else if story.has(.chapter4AskedForFood) {
+            return "朝になったら、町のパン屋でおそなえものを用意するのだ（出口から部屋に帰る）"
         } else if story.has(.chapter4Started) {
             return "閲覧机の兄弟に話しかけるのだ"
         }
@@ -89,7 +93,11 @@ struct Chapter4Events {
         if !story.has(.chapter4Started) {
             await opening()
         } else if !story.has(.chapter4Cleared) {
-            await runner.say(.fumi, "おかえりなさい。にぎやかな二人が待ってるわよ")
+            if story.has(.anpan) {
+                await runner.say(.fumi, "おかえりなさい。……あら、あまいにおい。にぎやかな二人が待ってるわよ")
+            } else {
+                await runner.say(.fumi, "おかえりなさい。にぎやかな二人が待ってるわよ")
+            }
         }
     }
 
@@ -109,6 +117,10 @@ struct Chapter4Events {
         } else if story.has(.orderKey) {
             await runner.say(.fumi, "声に出して読むとね、字が、ちゃんと耳から入ってくるの。眠くならないわよ")
             await runner.say(.zunda, "……ほんとうなのだ？")
+        } else if story.has(.anpan) {
+            await runner.say(.fumi, "いいにおい……。わたしにも、ひとくち……いえ、なんでもないわ")
+        } else if story.has(.chapter4AskedForFood) {
+            await runner.say(.fumi, "おそなえものなら、幽霊も食べられるのよ。昼の町のパン屋さん、知ってる？")
         } else {
             await runner.say(.fumi, "あの兄弟、毎晩ここで、二人で声に出して本を読んでたの。……ほかのお客さんには、ちょっと迷惑だったけど")
         }
@@ -122,6 +134,11 @@ struct Chapter4Events {
             if choice == 0 {
                 await enterBook()
             }
+        } else if story.has(.anpan) {
+            await bringAnpan()
+        } else if story.has(.chapter4AskedForFood) {
+            await runner.say(.taichi, "腹へったー……。ずんだもん、パン、まだー？")
+            await runner.say(.zunda, "朝になったら、パン屋さんに行ってくるのだ")
         } else {
             await runner.say(.taichi, "おれ、タイチ！ こっちは弟のジロ。おれたち、食いしん坊兄弟って呼ばれてたんだ")
             await runner.say(.jiro, "…………にいちゃん……")
@@ -131,14 +148,36 @@ struct Chapter4Events {
             await runner.say(.taichi, "最後にもういっぺん、二人で『注文の多い料理店』を読み合わせしたい。……でも、おれ一人じゃ、ジロの声が聞こえなくて")
             await runner.say(.fumi, "本の中なら、声もよく通るわ。ずんだもんちゃん、三人で読んでらっしゃい")
             await runner.say(.zunda, "こ、声に出して読むなんて、はずかしいのだ……")
-            await runner.say(.taichi, "大丈夫だって！ ほら、これ。本にはさまってたんだ。山猫軒の玄関の鍵だって、ジロが言ってた")
-            story.give(.orderKey)
-            story.set(.chapter4GotKey)
-            await runner.showItemGet(.orderKey)
-            let choice = await runner.choose(.taichi, "行こうぜ、ずんだもん！", ["本の中へ", "ちょっと待つのだ"])
-            if choice == 0 {
-                await enterBook()
-            }
+            await runner.say(.taichi, "……でもさ、その前に。腹がへって、おれまで声が出ないんだ")
+            await runner.say(.taichi, "むかし、本を読んだ帰りに、町のパン屋であんパンを買って、二人で半分こしてたんだ。あれ食べたら、元気出るのになあ")
+            await runner.say(.jiro, "……あんパン……")
+            await runner.say(.zunda, "ジロが、ちょっとだけしゃべったのだ")
+            await runner.say(.fumi, "おそなえものなら、幽霊も食べられるのよ。昼の町のパン屋さんのものなら、きっと")
+            await runner.say(.zunda, "……朝になったら、パン屋さんに行ってくるのだ。ずんだ餅じゃなくていいのだ？")
+            await runner.say(.taichi, "あんパン！ ぜったい、あんパン！")
+            story.set(.chapter4AskedForFood)
+            await runner.blackOut(true, duration: 1.0)
+            await runner.narrate("朝になったら、町のパン屋で\n兄弟へのおそなえものを用意するのだ。")
+            leave()
+        }
+    }
+
+    /// 朝にもらったあんパンを、兄弟にそなえる
+    private func bringAnpan() async {
+        await runner.say(.zunda, "おまたせなのだ。パン屋のミツさんの、あんパンなのだ")
+        story.take(.anpan)
+        await runner.say(.taichi, "これこれ！ この、まんなかのへこみ！ ……ジロ、半分こな")
+        await runner.say(.jiro, "……うん。……おいしい")
+        await runner.say(.taichi, "……ジロの声、さっきより聞こえる！")
+        await runner.say(.jiro, "にいちゃん、ほっぺに、あんこついてる")
+        await runner.say(.zunda, "（ほんとうに、ちょっとだけはっきりしたのだ）")
+        await runner.say(.taichi, "よーし、元気出た！ ほら、これ。本にはさまってたんだ。山猫軒の玄関の鍵だって、ジロが言ってた")
+        story.give(.orderKey)
+        story.set(.chapter4GotKey)
+        await runner.showItemGet(.orderKey)
+        let choice = await runner.choose(.taichi, "行こうぜ、ずんだもん！", ["本の中へ", "ちょっと待つのだ"])
+        if choice == 0 {
+            await enterBook()
         }
     }
 

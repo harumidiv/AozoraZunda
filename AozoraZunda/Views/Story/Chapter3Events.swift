@@ -35,6 +35,10 @@ struct Chapter3Events {
             return "サチに声をかけるのだ"
         } else if story.has(.unsentLetter) {
             return "サチと一緒に、本の中の汽車で手紙を届けに行くのだ"
+        } else if story.has(.stamp) {
+            return "ユイさんにもらった切手を、サチに渡すのだ"
+        } else if story.has(.chapter3AskedForStamp) {
+            return "朝になったら、町で切手をさがすのだ（出口から部屋に帰る）"
         } else if story.has(.chapter3Started) {
             return "閲覧机の女の子に話しかけるのだ"
         }
@@ -61,7 +65,11 @@ struct Chapter3Events {
         if !story.has(.chapter3Started) {
             await opening()
         } else if !story.has(.chapter3Cleared) {
-            await runner.say(.fumi, "おかえりなさい。サチちゃんが待ってるわよ")
+            if story.has(.stamp) {
+                await runner.say(.fumi, "おかえりなさい。……切手、見つかったのね。サチちゃんが待ってるわよ")
+            } else {
+                await runner.say(.fumi, "おかえりなさい。サチちゃんが待ってるわよ")
+            }
         }
     }
 
@@ -87,6 +95,10 @@ struct Chapter3Events {
             await runner.say(.fumi, "サチちゃん、すっかりいい顔になったわね")
         } else if story.has(.unsentLetter) {
             await runner.say(.fumi, "銀河鉄道の終点には、物語を書いた人の思いが残っているかもしれないわ")
+        } else if story.has(.stamp) {
+            await runner.say(.fumi, "きれいな切手ね。星空と、汽車。……サチちゃんの手紙に、ぴったり")
+        } else if story.has(.chapter3AskedForStamp) {
+            await runner.say(.fumi, "切手は、昼の世界のものよ。朝の町で、さがしてみて")
         } else {
             await runner.say(.fumi, "あの子、ずっと手紙をかかえてるの。……話を聞いてあげて")
         }
@@ -100,6 +112,11 @@ struct Chapter3Events {
             if choice == 0 {
                 await enterBook()
             }
+        } else if story.has(.stamp) {
+            await bringStamp()
+        } else if story.has(.chapter3AskedForStamp) {
+            await runner.say(.sachi, "……切手、あった？")
+            await runner.say(.zunda, "朝になったら、町でさがしてくるのだ")
         } else {
             await runner.say(.sachi, "……あ。こんばんは")
             await runner.say(.sachi, "わたし、サチ。この手紙……『銀河鉄道の夜』を書いた人に、出したかったの")
@@ -108,15 +125,35 @@ struct Chapter3Events {
             await runner.say(.sachi, "うん。……でも、作者さんは、わたしが生まれるずっと前に、もういなくなってたの")
             await runner.say(.sachi, "それでも、届けたかった。あの本、ほんとうに好きだったから")
             await runner.say(.fumi, "それなら、本の中の汽車に乗ってごらんなさい。終点まで行けば、きっと")
-            story.give(.unsentLetter)
-            story.set(.chapter3GotLetter)
-            await runner.showItemGet(.unsentLetter)
-            await runner.say(.sachi, "わたし、幽霊だから、本の中だと手紙が持てないの。……ずんだもんちゃん、持っていってくれる？")
-            await runner.say(.zunda, "し、仕方ないのだ。両手でしっかり持つのだ")
-            let choice = await runner.choose(.sachi, "……一緒に来てくれる？", ["本の中へ", "ちょっと待つのだ"])
-            if choice == 0 {
-                await enterBook()
-            }
+            await runner.say(.sachi, "……でもね、この手紙、まだ切手を貼ってないの。切手のない手紙は、届かないでしょう？")
+            await runner.say(.zunda, "本の中の汽車なのに、切手がいるのだ？")
+            await runner.say(.sachi, "わかんない。……でも、ちゃんと出したいの。切手を貼って、ポストに入れるみたいに")
+            await runner.say(.fumi, "切符がないと汽車に乗れないように、手紙には切手ね。……切手は、昼の世界のものよ")
+            await runner.say(.zunda, "……朝になったら、町でさがしてくるのだ。手紙にくわしい人がいるかもしれないのだ")
+            await runner.say(.sachi, "ほんと？ ……ありがとう。わたし、ここで待ってるね")
+            story.set(.chapter3AskedForStamp)
+            await runner.blackOut(true, duration: 1.0)
+            await runner.narrate("朝になったら、町で\nサチの手紙に貼る切手をさがすのだ。")
+            leave()
+        }
+    }
+
+    /// 朝にもらった切手を、サチの手紙に貼る
+    private func bringStamp() async {
+        await runner.say(.zunda, "サチ！ 切手、もらってきたのだ。星空と汽車の絵なのだ")
+        await runner.say(.sachi, "……わあ。銀河鉄道みたい")
+        story.take(.stamp)
+        await runner.say(.sachi, "ずんだもんちゃん、貼って。……まっすぐにね")
+        await runner.say(.zunda, "ぺたっ。……まっすぐなのだ")
+        await runner.say(.sachi, "……これで、ちゃんとした手紙になった")
+        story.give(.unsentLetter)
+        story.set(.chapter3GotLetter)
+        await runner.showItemGet(.unsentLetter)
+        await runner.say(.sachi, "わたし、幽霊だから、本の中だと手紙が持てないの。……ずんだもんちゃん、持っていってくれる？")
+        await runner.say(.zunda, "し、仕方ないのだ。両手でしっかり持つのだ")
+        let choice = await runner.choose(.sachi, "……一緒に来てくれる？", ["本の中へ", "ちょっと待つのだ"])
+        if choice == 0 {
+            await enterBook()
         }
     }
 

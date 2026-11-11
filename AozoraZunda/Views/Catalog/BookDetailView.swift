@@ -4,6 +4,7 @@ import SwiftUI
 struct BookDetailView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(ErrandStore.self) private var errands
+    @Environment(StoryStore.self) private var story
     let book: CatalogBook
 
     @State private var errorMessage: String?
@@ -40,6 +41,19 @@ struct BookDetailView: View {
                 }
                 Link(destination: book.cardURL) {
                     Label("図書カードを開く", systemImage: "safari")
+                }
+            }
+
+            if let task = StoryDayTask.borrowing(book, story: story) {
+                Section {
+                    Button("夜の図書室へ持っていく（かりる）", systemImage: "moon.stars") {
+                        task.borrow(into: story)
+                        borrowNote = task.borrowNote
+                    }
+                }
+            } else if let borrowNote, errands.carrying?.id != book.id {
+                Section {
+                    Text(borrowNote)
                 }
             }
 

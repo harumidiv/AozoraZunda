@@ -6,7 +6,11 @@ import Foundation
 extension NightLibraryView {
     /// 図書室で、いまストーリーが進むもの
     static func isStoryTarget(_ interactable: NightLibraryInteractable, story: StoryStore) -> Bool {
-        switch chapter(story) {
+        // 朝に用意するものがあるあいだは、出口から部屋に帰るのがつぎの一歩
+        if StoryDayTask.current(story) != nil {
+            return interactable == .exit
+        }
+        return switch chapter(story) {
         case .prologue: PrologueEvents.isStoryTarget(interactable, story: story)
         case .chapter1: Chapter1Events.isStoryTarget(interactable, story: story)
         case .chapter2: interactable == .tama && !story.has(.chapter2Cleared)
@@ -158,7 +162,9 @@ extension FinaleEvents {
     static func isStoryTarget(_ interactable: NightLibraryInteractable, story: StoryStore) -> Bool {
         switch interactable {
         case .fumi:
-            return story.has(.finaleStarted) && !story.has(.finaleFoundHaru)
+            return isBookReady(story) && !story.has(.finaleFoundHaru)
+        case .bookshelf(NightLibraryInteractable.cornerShelf) where story.has(.tebukuroBook) && !story.has(.finaleShelvedBook):
+            return true
         case .haru:
             return story.has(.finaleFoundHaru) && !story.has(.finaleReadToEnd)
         case .bookshelf:
