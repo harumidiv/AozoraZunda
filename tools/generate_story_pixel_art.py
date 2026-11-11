@@ -15,6 +15,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 from story_chapter1_art import chapter1_sprites
+from story_day_art import day_sprites
 from story_chapter2_art import chapter2_sprites
 from story_chapter3_art import chapter3_sprites
 from story_wanderers_art import wanderer_sprites
@@ -529,6 +530,7 @@ def build_sprites():
     sprites.update(wanderer_sprites())
     sprites.update(chapter4_sprites())
     sprites.update(finale_sprites())
+    sprites.update(day_sprites())
     return sprites
 
 

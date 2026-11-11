@@ -33,6 +33,10 @@ struct Chapter2Events {
             return "タマに、本を読んであげるのだ"
         } else if story.has(.annotatedBook) {
             return "タマと一緒に、本の中のキヨさんの書き込みを辿るのだ"
+        } else if story.has(.tamaBell) {
+            return "公園で見つけた鈴を、タマに渡すのだ"
+        } else if story.has(.chapter2AskedForBell) {
+            return "朝になったら、公園でタマの鈴をさがすのだ（出口から部屋に帰る）"
         } else if story.has(.chapter2Started) {
             return "閲覧机の上の、猫の幽霊に話しかけるのだ"
         }
@@ -53,7 +57,11 @@ struct Chapter2Events {
         if !story.has(.chapter2Started) {
             await opening()
         } else if !story.has(.chapter2Cleared) {
-            await runner.say(.fumi, "おかえりなさい。タマちゃん、机の上で待ってるわよ")
+            if story.has(.tamaBell) {
+                await runner.say(.fumi, "おかえりなさい。……あら、ちりんって音がしたわ。タマちゃん、待ってるわよ")
+            } else {
+                await runner.say(.fumi, "おかえりなさい。タマちゃん、机の上で待ってるわよ")
+            }
         }
     }
 
@@ -80,6 +88,10 @@ struct Chapter2Events {
             await runner.say(.fumi, "タマちゃんに、読んであげて。キヨさんのかわりに")
         } else if story.has(.annotatedBook) {
             await runner.say(.fumi, "書き込みはね、その人がその本を読んだ足あとなの。辿っていけば、きっと会えるわ")
+        } else if story.has(.tamaBell) {
+            await runner.say(.fumi, "ちりん、って。……いい音。タマちゃんに聞かせてあげて")
+        } else if story.has(.chapter2AskedForBell) {
+            await runner.say(.fumi, "日なたのベンチ……。昼の町の公園かしら。朝になったら、さがしてみて")
         } else {
             await runner.say(.fumi, "猫ちゃんの幽霊なんて、めずらしいわね。……かわいい")
         }
@@ -93,6 +105,11 @@ struct Chapter2Events {
             if choice == 0 {
                 await enterBook()
             }
+        } else if story.has(.tamaBell) {
+            await bringBell()
+        } else if story.has(.chapter2AskedForBell) {
+            await runner.say(.tama, "……鈴は、見つかったか。日なたの、ベンチのあたりだ")
+            await runner.say(.zunda, "朝になったら、公園をさがしてくるのだ")
         } else {
             await runner.say(.tama, "……吾輩はタマである。名前は、もうある")
             await runner.say(.zunda, "ね、猫がしゃべったのだ！")
@@ -101,15 +118,37 @@ struct Chapter2Events {
             await runner.say(.tama, "けれど、ある晩からキヨさんの声は、だんだん小さくなって……つづきは、聞けないままになった")
             await runner.say(.tama, "吾輩は、もう一度あの時間に戻りたいのだ。キヨさんのひざの上の、あの時間に")
             await runner.say(.zunda, "…………")
-            story.give(.annotatedBook)
-            story.set(.chapter2GotBook)
-            await runner.showItemGet(.annotatedBook)
-            await runner.say(.fumi, "あら、書き込みだらけね。……傍線に、『ここ笑った』の字。キヨさんの足あとよ")
-            await runner.say(.fumi, "本の中で、書き込みを辿ってごらんなさい。キヨさんがどんなふうにこの本を読んだのか、きっと分かるわ")
-            let choice = await runner.choose(.tama, "……一緒に来てくれるか", ["本の中へ", "ちょっと待つのだ"])
-            if choice == 0 {
-                await enterBook()
-            }
+            await runner.say(.tama, "……けれど、困ったことがある。キヨさんの声も、ひざのぬくさも、だんだん思い出せなくなってきた")
+            await runner.say(.tama, "キヨさんがくれた首輪の鈴を、どこかで落としてしまったのだ。あれが鳴れば、思い出せる気がする")
+            await runner.say(.tama, "キヨさんと、よく日なたのベンチで本を読んだ。……落としたのは、きっとあのあたりだ")
+            await runner.say(.fumi, "日なたのベンチ……。昼の町の公園かしら。鈴は昼の世界のものだから、夜の図書室にはないわね")
+            await runner.say(.zunda, "……朝になったら、さがしてくるのだ。ちょっとだけなのだ")
+            await runner.say(.tama, "……すまない。吾輩は、ここで待つ")
+            story.set(.chapter2AskedForBell)
+            await runner.blackOut(true, duration: 1.0)
+            await runner.narrate("朝になったら、町の公園で\nタマの鈴をさがすのだ。")
+            leave()
+        }
+    }
+
+    /// 公園で見つけた鈴を鳴らすと、タマがキヨさんを思い出す
+    private func bringBell() async {
+        await runner.say(.zunda, "タマ、これなのだ？ 公園のベンチの下に、ずっと落ちてたのだ")
+        story.take(.tamaBell)
+        await runner.narrate("ちりん。")
+        await runner.say(.tama, "…………")
+        await runner.say(.tama, "……この音だ。キヨさんが「タマ、おいで」と言うと、吾輩はこの音をさせて、ひざにのぼった")
+        await runner.say(.tama, "思い出した。キヨさんの声。少しかすれていて、笑うところで、いつも先に笑ってしまう声だ")
+        await runner.say(.zunda, "……いい声なのだ")
+        await runner.say(.tama, "……この本を、キヨさんが読んでくれた。ずんだもん、受けとってくれ")
+        story.give(.annotatedBook)
+        story.set(.chapter2GotBook)
+        await runner.showItemGet(.annotatedBook)
+        await runner.say(.fumi, "あら、書き込みだらけね。……傍線に、『ここ笑った』の字。キヨさんの足あとよ")
+        await runner.say(.fumi, "本の中で、書き込みを辿ってごらんなさい。キヨさんがどんなふうにこの本を読んだのか、きっと分かるわ")
+        let choice = await runner.choose(.tama, "……一緒に来てくれるか", ["本の中へ", "ちょっと待つのだ"])
+        if choice == 0 {
+            await enterBook()
         }
     }
 

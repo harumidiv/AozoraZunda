@@ -4,6 +4,7 @@ import SwiftUI
 /// 図書館で借りた本を届ける
 struct TownView: View {
     @Environment(ErrandStore.self) private var errands
+    @Environment(StoryStore.self) private var story
     /// ずんだもんの部屋に帰る
     let goHome: () -> Void
     /// 図書館に入る
@@ -22,6 +23,12 @@ struct TownView: View {
     private var isInputEnabled: Bool { !runner.isRunning && !showsErrands }
 
     private var idleMessage: String {
+        // 夜の図書室で頼まれたことがあれば、そちらを先に案内する
+        if let task = StoryDayTask.current(story) {
+            return task.townObjective
+        } else if let task = StoryDayTask.ready(story) {
+            return task.readyObjective
+        }
         if let book = errands.carrying {
             return "『\(book.title)』をかりているのだ。待っている人に届けるのだ"
         } else if errands.isLookingForBook {
@@ -76,11 +83,25 @@ struct TownView: View {
         .onChange(of: errands.carrying) { refreshScene() }
         .onChange(of: errands.accepted) { refreshScene() }
         .onChange(of: errands.delivered) { refreshScene() }
+        .onChange(of: story.flags) { refreshScene() }
+    }
+
+    /// 朝のおつかいで話しかける相手
+    private var storyPerson: Townsperson? {
+        StoryDayTask.current(story)?.person
     }
 
     private func refreshScene() {
         scene.showCarriedBook(errands.carrying != nil)
-        scene.updateMarks(wishing: wishingPeople)
+        scene.updateMarks(wishing: wishingPeople, story: storyPerson)
+        scene.isStoryTarget = { [story] interactable in
+            guard let task = StoryDayTask.current(story) else { return false }
+            if let person = task.person {
+                return interactable == .person(person)
+            }
+            // 本を借りるおつかいは、図書館の入口へ
+            return interactable == .library
+        }
     }
 
     private func interact(with interactable: TownInteractable) {
@@ -95,7 +116,12 @@ struct TownView: View {
             }
         case .person(let person):
             let events = TownEvents(runner: runner, errands: errands, scene: scene)
-            runner.run { await events.talk(to: person) }
+            let dayEvents = StoryDayEvents(runner: runner, story: story)
+            runner.run {
+                if await dayEvents.talk(to: person) { return }
+                await dayEvents.hint(from: person)
+                await events.talk(to: person)
+            }
         }
     }
 }

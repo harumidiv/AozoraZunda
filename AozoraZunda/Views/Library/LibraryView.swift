@@ -16,6 +16,8 @@ struct LibraryView: View {
     @State private var scene: RoomScene
     @State private var dialog: RoomDialog?
     @State private var tvAd = TVAdController()
+    /// 町から帰ってきたか（夜間図書室から帰ってきた朝は false）
+    private let startsAtDoor: Bool
 
     private static let bedLines = [
         "ふかふかのお布団なのだ。…でも、もう1ページだけ読むのだ",
@@ -29,14 +31,25 @@ struct LibraryView: View {
         self.goOutside = goOutside
         self.goToLibrary = goToLibrary
         self.goToNightLibrary = goToNightLibrary
+        self.startsAtDoor = startsAtDoor
         _scene = State(initialValue: RoomScene(startsAtDoor: startsAtDoor))
+    }
+
+    /// 夜に頼まれたことがあれば、それを「いまやること」にする
+    private var idleMessage: String {
+        if let task = StoryDayTask.current(story) {
+            return "\(task.townObjective)（下のドアから町へ）"
+        } else if let task = StoryDayTask.ready(story) {
+            return task.readyObjective
+        }
+        return "ずんだもんの部屋なのだ。行きたい場所をタップすると歩くのだ。下のドアから町へ出かけられるのだ"
     }
 
     var body: some View {
         NavigationStack(path: $path) {
             WalkGameView(
                 scene: scene,
-                idleMessage: "ずんだもんの部屋なのだ。行きたい場所をタップすると歩くのだ。下のドアから町へ出かけられるのだ",
+                idleMessage: idleMessage,
                 isInputEnabled: dialog == nil,
                 showsBanner: true
             ) { interactable in
@@ -55,7 +68,17 @@ struct LibraryView: View {
                     dialog = RoomDialog(text: "ふむふむ…なかなかおもしろかったのだ", choices: [close])
                 }
                 tvAd.load()
-                offerStoryBookIfNeeded()
+                scene.isStoryTarget = { [story] interactable in
+                    if StoryDayTask.current(story) != nil { return interactable == .door }
+                    if StoryDayTask.ready(story) != nil { return interactable == .bed }
+                    return false
+                }
+                if !startsAtDoor, let task = StoryDayTask.current(story) {
+                    // 夜に頼まれたことを思い出して目をさます
+                    dialog = RoomDialog(text: task.wakeUpLine, choices: [close])
+                } else {
+                    offerStoryBookIfNeeded()
+                }
             }
             .task(id: library.sortedBooks.map(\.id)) {
                 // 調べる前から冊数が分かるよう、部屋の本棚に持っている本を並べる
@@ -82,8 +105,9 @@ struct LibraryView: View {
         case .desk:
             dialog = deskDialog()
         case .bed:
+            let readyLine = StoryDayTask.ready(story).map { _ in "用意はできたのだ。……夜になったら、図書室に持っていくのだ" }
             dialog = RoomDialog(
-                text: Self.bedLines.randomElement() ?? "",
+                text: readyLine ?? Self.bedLines.randomElement() ?? "",
                 choices: [
                     GameChoice("夜まで まつ（ストーリー）") {
                         dialog = nil

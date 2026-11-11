@@ -432,6 +432,24 @@ def bubble():
     return from_ascii(rows, {"k": OUTLINE, "w": WHITE, "r": rgb(0xD94A4A)})
 
 
+def story_bubble():
+    """ストーリーが進むものの上に出る、金色の「！」吹き出し"""
+    rows = [
+        "..kkkkkkk..",
+        ".kllyyyyyk.",
+        "klyyyrryyyk",
+        "kyyyyrryyyk",
+        "kyyyyrryyyk",
+        "kyyyyyyyyyk",
+        "kyyyyrryyyk",
+        ".kyyyyyyyk.",
+        "..kkkykkk..",
+        "....kyk....",
+        ".....k.....",
+    ]
+    return from_ascii(rows, {"k": OUTLINE, "y": rgb(0xF6C945), "l": rgb(0xFFF3B0), "r": rgb(0xB0302A)})
+
+
 def shadow():
     image = new(12, 5)
     ImageDraw.Draw(image).ellipse((0, 0, 11, 4), fill=(0, 0, 0, 70))
@@ -658,6 +676,7 @@ def build_sprites():
         "tv_1": tv(1),
         "doormat": doormat(),
         "bubble": bubble(),
+        "bubble_story": story_bubble(),
         "shadow": shadow(),
     }
     for index in range(4):

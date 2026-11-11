@@ -24,6 +24,12 @@ struct Chapter1Events {
             return "夜の図書室なのだ。つぎのお話は、まだ準備中なのだ"
         } else if story.has(.chapter1ReachedEnd) {
             return "タクに声をかけるのだ"
+        } else if story.has(.chapter1BookReady) || story.has(.chapter1RiverCrossed) {
+            return "タクと一緒に、本の中へ行くのだ（タクに話しかける）"
+        } else if story.has(.melosBook) {
+            return "昼の図書館でかりた『走れメロス』を、タクに渡すのだ"
+        } else if story.has(.chapter1AskedForBook) {
+            return "朝になったら、町の図書館で『走れメロス』をかりてくるのだ（出口から部屋に帰る）"
         } else if story.has(.ticketBookmark) {
             return "しおりをタクに届けるのだ"
         } else if story.has(.chapter1AskedBookmark) {
@@ -57,7 +63,13 @@ struct Chapter1Events {
         if !story.has(.chapter1Started) {
             await opening()
         } else if !story.has(.chapter1Cleared) {
-            await runner.say(.fumi, "おかえりなさい。タクくんが待ってるわよ")
+            if story.has(.melosBook) {
+                await runner.say(.fumi, "おかえりなさい。……あら、その本。タクくんに見せてあげて")
+            } else if story.has(.chapter1AskedForBook) && !story.has(.chapter1BookReady) {
+                await runner.say(.fumi, "おかえりなさい。……昼の図書館の本は、まだみたいね。タクくん、待ってるわよ")
+            } else {
+                await runner.say(.fumi, "おかえりなさい。タクくんが待ってるわよ")
+            }
         }
     }
 
@@ -83,6 +95,12 @@ struct Chapter1Events {
             }
         } else if story.has(.chapter1ReachedEnd) {
             await runner.say(.fumi, "タクくん、ずいぶんすっきりした顔をしてるわね")
+        } else if story.has(.chapter1BookReady) {
+            await runner.say(.fumi, "切符をはさんだページから、本の中に入れるわ。日が沈む前に、シラクスへ")
+        } else if story.has(.melosBook) {
+            await runner.say(.fumi, "昼の図書館の本ね。……新しい紙のにおい。タクくんに渡してあげて")
+        } else if story.has(.chapter1AskedForBook) {
+            await runner.say(.fumi, "夜の図書室の本は、ここから持ち出せないの。でも、昼の本なら、夜に持ってこられるわ")
         } else if story.has(.ticketBookmark) {
             await runner.say(.fumi, "しおりを挟んだページからなら、本の中に入れるわ。タクくんに渡してあげて")
         } else if story.has(.chapter1AskedBookmark) {
@@ -95,24 +113,37 @@ struct Chapter1Events {
     func talkToTaku() async {
         if story.has(.chapter1ReachedEnd) {
             await farewell()
-        } else if story.has(.tatteredBook) {
+        } else if story.has(.chapter1BookReady) || story.has(.chapter1RiverCrossed) {
             let choice = await runner.choose(.taku, "本の中、もう一回行ける？", ["本の中へ", "まだ"])
             if choice == 0 {
                 await enterBook()
             }
+        } else if story.has(.melosBook) {
+            await bringBook()
+        } else if story.has(.tatteredBook) {
+            await runner.say(.taku, "……昼の図書館の『走れメロス』、あった？")
+            await runner.say(.zunda, "朝になったら、ずんだもんが町の図書館でかりてくるのだ。まかせるのだ")
         } else if story.has(.ticketBookmark) {
             await runner.say(.taku, "それ！ ぼくの切符。……通学の電車で、いつもこれを挟んで読んでたんだ")
-            story.take(.ticketBookmark)
+            await runner.say(.fumi, "しおりを挟んだページからなら、本の中に入れるのよ。夜の司書の特技なの")
+            await runner.say(.zunda, "ほ、本の中！？")
+            await runner.say(.fumi, "……でも、この本はだめね。川のところから先のページが、ないもの")
+            await runner.say(.fumi, "ページのない先には、物語もないの。入っても、川の前で行きどまりよ")
+            await runner.say(.taku, "そんな……")
+            await runner.say(.zunda, "……ちゃんとした『走れメロス』があればいいのだ？ この図書室の棚には、ないのだ？")
+            await runner.say(.fumi, "あるけれど、夜の図書室の本は、ここから出ていけないし、しおりもはさめないの。幽霊の本だから")
+            await runner.say(.fumi, "でも、昼の世界の本なら、夜に持ってこられるわ。……ずんだもんちゃん、昼の図書館って知ってる？")
+            await runner.say(.zunda, "町の図書館なのだ？ ……あんまり入ったことないけど、あるのだ")
+            await runner.say(.taku, "……じゃあ、これ、預かってて。ぼくの本と、切符")
             story.give(.tatteredBook)
             await runner.showItemGet(.tatteredBook)
-            await runner.say(.fumi, "しおりのページからなら、本の中に入れるのよ。夜の司書の特技なの")
-            await runner.say(.zunda, "ほ、本の中！？")
-            await runner.say(.fumi, "結末は、本の中で確かめてらっしゃい。タクくんも一緒にね")
-            await runner.say(.fumi, "ただし、物語の時間は止まってくれないわ。日が沈む前に、シラクスへ")
-            let choice = await runner.choose(.taku, "……いっしょに来てくれる？", ["本の中へ", "ちょっと待つのだ"])
-            if choice == 0 {
-                await enterBook()
-            }
+            story.set(.chapter1AskedForBook)
+            await runner.say(.taku, "ぼく、ここで待ってる。続きが読めるなら、何回だって待てるよ")
+            await runner.say(.fumi, "今夜はもう遅いわ。朝になったら、町の図書館で『走れメロス』を借りていらっしゃい")
+            await runner.say(.zunda, "し、仕方ないのだ。……ちょっとだけ、なのだ")
+            await runner.blackOut(true, duration: 1.0)
+            await runner.narrate("朝になったら、町の図書館で\n『走れメロス』をかりてくるのだ。")
+            leave()
         } else if story.has(.chapter1AskedBookmark) {
             await runner.say(.taku, "しおり、見つかった……？")
         } else {
@@ -125,6 +156,23 @@ struct Chapter1Events {
             await runner.say(.zunda, "しおりなら、ずんだもんが探してくるのだ。……ちょっとだけなのだ")
             story.set(.chapter1AskedBookmark)
             library.showTakuBookmarkSparkle()
+        }
+    }
+
+    /// 昼の図書館で借りてきた本に、タクの切符をはさむ
+    private func bringBook() async {
+        await runner.say(.zunda, "タク！ 町の図書館で、かりてきたのだ。『走れメロス』なのだ！")
+        await runner.say(.taku, "……ほんとに？ ……ほんとだ。川のところの、その先も、ちゃんとある")
+        await runner.say(.taku, "新しい紙のにおいがする。……ぼくの本と、同じお話なのに、なんだか不思議だね")
+        await runner.say(.zunda, "切符、ここにはさむのだ。川の、ちょっと前のページなのだ")
+        story.take(.melosBook)
+        story.take(.ticketBookmark)
+        story.set(.chapter1BookReady)
+        await runner.say(.fumi, "これで入れるわ。結末は、本の中で確かめてらっしゃい。タクくんも一緒にね")
+        await runner.say(.fumi, "ただし、物語の時間は止まってくれないわ。日が沈む前に、シラクスへ")
+        let choice = await runner.choose(.taku, "……いっしょに来てくれる？", ["本の中へ", "ちょっと待つのだ"])
+        if choice == 0 {
+            await enterBook()
         }
     }
 
@@ -335,6 +383,7 @@ struct Chapter1Events {
         await runner.say(.fumi, "……そう。その人、きっと喜んでるわ")
         await runner.say(.taku, "続きが気になって眠れないのって、ひさしぶりだった。……じゃあね")
         story.take(.tatteredBook)
+        story.take(.ticketBookmark)
         await library.ascendTaku()
         await runner.say(.zunda, "……行っちゃったのだ")
         await runner.say(.fumi, "その本、ちゃんとした版が棚にあるわよ。……気になる？")
