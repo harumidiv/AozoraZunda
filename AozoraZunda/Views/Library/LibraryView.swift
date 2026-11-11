@@ -16,6 +16,9 @@ struct LibraryView: View {
     @State private var scene: RoomScene
     @State private var dialog: RoomDialog?
     @State private var tvAd = TVAdController()
+    /// はじめて起動したときの、ずんだもんの説明に使う
+    @State private var runner = StoryRunner()
+    @AppStorage("room.hasSeenIntro") private var hasSeenIntro = false
     /// 町から帰ってきたか（夜間図書室から帰ってきた朝は false）
     private let startsAtDoor: Bool
 
@@ -50,7 +53,7 @@ struct LibraryView: View {
             WalkGameView(
                 scene: scene,
                 idleMessage: idleMessage,
-                isInputEnabled: dialog == nil,
+                isInputEnabled: dialog == nil && !runner.isRunning,
                 showsBanner: true
             ) { interactable in
                 interact(with: interactable)
@@ -60,6 +63,9 @@ struct LibraryView: View {
                     DialogOverlay(dialog: dialog) { self.dialog = nil }
                         .transition(.opacity)
                 }
+            }
+            .overlay {
+                StoryOverlay(runner: runner)
             }
             .animation(.easeOut(duration: 0.15), value: dialog == nil)
             .onAppear {
@@ -73,7 +79,10 @@ struct LibraryView: View {
                     if StoryDayTask.ready(story) != nil { return interactable == .bed }
                     return false
                 }
-                if !startsAtDoor, let task = StoryDayTask.current(story) {
+                if !hasSeenIntro {
+                    hasSeenIntro = true
+                    playIntro()
+                } else if !startsAtDoor, let task = StoryDayTask.current(story) {
                     // 夜に頼まれたことを思い出して目をさます
                     dialog = RoomDialog(text: task.wakeUpLine, choices: [close])
                 } else {
@@ -156,13 +165,42 @@ struct LibraryView: View {
         }
     }
 
-    /// 最後に開いた読みかけの本のつづきをすすめる
+    /// はじめて起動したときに、このアプリでできることを、ずんだもんが話す。
+    /// ポストに届いた図書カードを読む形で、町の図書館・部屋・町の人・夜の図書室のことを伝える
+    private func playIntro() {
+        runner.run { [runner, goOutside] in
+            await runner.say(.zunda, "ふあぁ……おはようなのだ。ここは、ずんだもんの部屋なのだ")
+            await runner.say(.zunda, "……ん？ ポストに、何か入ってたのだ。町の図書館の、図書カード……？")
+            await runner.quote("あおぞら町立図書館\n\n青空文庫の本を、どなたでも無料で読めます。\n読みたい本は、司書におたずねください。")
+            await runner.say(.zunda, "本……。字ばっかりのやつなのだ。見てるだけで眠くなるのだ……")
+            await runner.say(.zunda, "でも、下のドアから町に出て、上のほうにある図書館に行けば、読みたい本をさがせるらしいのだ")
+            await runner.say(.zunda, "題名や作家の名前を司書さんに言うと、本棚から出してきてくれるのだ。……読むのがめんどうなら、ずんだもんが声に出して読んであげるのだ")
+            await runner.say(.zunda, "読んだ本は、部屋の本棚にしまっておけるのだ。読みかけの本は、机でつづきから読めるのだ")
+            await runner.say(.zunda, "それと、町には、読みたい本をさがしてる人もいるのだ。「！」が出てる人に話しかけてみるのだ")
+            await runner.say(.zunda, "……………………")
+            await runner.say(.zunda, "……ないしょの話なのだ。このごろ、雨の夜にベッドで眠ると、へんな夢を見るのだ")
+            await runner.say(.zunda, "見たことない、夜だけ開く図書館の夢なのだ。透けてる人が、ずんだもんを待ってる気がするのだ")
+            await runner.say(.zunda, "……ベッドで夜まで待ったら、また、あの図書館に行けるかもしれないのだ")
+            let choice = await runner.choose(.zunda, "行きたい場所をタップすると歩くのだ。まずは、どうするのだ？", ["町の図書館へ行ってみる", "部屋を見てまわる"])
+            if choice == 0 {
+                goOutside()
+            } else {
+                await runner.say(.zunda, "机をしらべると、この話をもう一回聞けるのだ。ゆっくり見てまわるのだ")
+            }
+        }
+    }
+
+    /// 最後に開いた読みかけの本のつづきをすすめる。あそびかたも、ここでもう一度聞ける
     private func deskDialog() -> RoomDialog {
+        let intro = GameChoice("あそびかたを聞く") {
+            dialog = nil
+            playIntro()
+        }
         let reading = library.books
             .filter { $0.lastOpenedAt != nil && !MyShelfView.isFinished($0) }
             .max { ($0.lastOpenedAt ?? .distantPast) < ($1.lastOpenedAt ?? .distantPast) }
         guard let reading else {
-            return RoomDialog(text: "読みかけの本はないのだ。本棚から読みたい本をえらぶのだ", choices: [close])
+            return RoomDialog(text: "読みかけの本はないのだ。本棚から読みたい本をえらぶのだ", choices: [intro, close])
         }
         let percent = Int((reading.progress * 100).rounded())
         return RoomDialog(
@@ -172,6 +210,7 @@ struct LibraryView: View {
                     dialog = nil
                     path.append(ReaderRoute(book: reading.book))
                 },
+                intro,
                 GameChoice("あとにする") { dialog = nil },
             ]
         )
