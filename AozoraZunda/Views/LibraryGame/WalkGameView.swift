@@ -87,10 +87,11 @@ struct WalkGameView<Interactable: WalkInteractable>: View {
             scene.stopWalking()
             scene.isPaused = true
         }
-        .onChange(of: isInputEnabled) { _, isEnabled in
+        .onChange(of: isInputEnabled, initial: true) { _, isEnabled in
             if !isEnabled {
                 scene.stopWalking()
             }
+            scene.hidesBubble = !isEnabled
         }
     }
 

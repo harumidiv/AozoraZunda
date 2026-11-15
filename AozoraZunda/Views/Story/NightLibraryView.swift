@@ -20,14 +20,16 @@ struct NightLibraryView: View {
     @State private var tebukuroScene: TebukuroScene?
     @State private var showsGhostBook = false
 
-    private enum Chapter {
+    enum Chapter {
         case prologue, chapter1, chapter2, chapter3, chapter4, chapter5, finale
     }
 
     init(story: StoryStore, leave: @escaping () -> Void) {
         self.story = story
         self.leave = leave
-        _scene = State(initialValue: NightLibraryScene(flags: story.flags))
+        let scene = NightLibraryScene(flags: story.flags)
+        scene.isStoryTarget = { [story] in Self.isStoryTarget($0, story: story) }
+        _scene = State(initialValue: scene)
         let runner = StoryRunner()
         // 章のはじめは、真っ暗な画面の語りや見出しから始める
         let startsChapter = !story.has(.prologueMetFumi)
@@ -43,7 +45,9 @@ struct NightLibraryView: View {
     }
 
     /// いま遊んでいる章（最後の章を終えたあとも、その章のまま）
-    private var chapter: Chapter {
+    private var chapter: Chapter { Self.chapter(story) }
+
+    static func chapter(_ story: StoryStore) -> Chapter {
         if !story.has(.prologueCleared) {
             .prologue
         } else if !story.has(.chapter1Cleared) {
@@ -74,6 +78,10 @@ struct NightLibraryView: View {
             library: scene,
             openBook: { [self] in
                 let book = MelosScene(flags: story.flags)
+                book.isStoryTarget = { [weak book] in
+                    guard let book else { return false }
+                    return Chapter1Events.isStoryTarget($0, story: story, clock: book.clock)
+                }
                 book.onTimeUp = { [self] in
                     let chapter1 = chapter1
                     runner.run { await chapter1.timeUp() }
@@ -95,6 +103,10 @@ struct NightLibraryView: View {
             library: scene,
             openBook: { [self] in
                 let book = NekoScene(flags: story.flags)
+                book.isStoryTarget = { [weak book] in
+                    guard let book else { return false }
+                    return Chapter2Events.isStoryTarget($0, story: story, progress: book.progress)
+                }
                 nekoScene = book
                 return book
             },
@@ -112,6 +124,14 @@ struct NightLibraryView: View {
             library: scene,
             openBook: { [self] in
                 let book = GingaScene(flags: story.flags)
+                book.isStoryTarget = { [weak book] in
+                    guard let book else { return false }
+                    return Chapter3Events.isStoryTarget($0, story: story, scene: book)
+                }
+                book.isAvailable = { [weak book] in
+                    guard let book else { return false }
+                    return Chapter3Events.isAvailable($0, story: story, scene: book)
+                }
                 gingaScene = book
                 return book
             },
@@ -128,6 +148,14 @@ struct NightLibraryView: View {
             library: scene,
             openBook: { [self] in
                 let book = YamanekoScene()
+                book.isStoryTarget = { [weak book] in
+                    guard let book else { return false }
+                    return Chapter4Events.isStoryTarget($0, scene: book)
+                }
+                book.isAvailable = { [weak book, story] in
+                    guard let book else { return false }
+                    return Chapter4Events.isAvailable($0, story: story, scene: book)
+                }
                 yamanekoScene = book
                 return book
             },
@@ -149,6 +177,7 @@ struct NightLibraryView: View {
             library: scene,
             openBook: { [self] in
                 let book = TebukuroScene(flags: story.flags)
+                book.isStoryTarget = { FinaleEvents.isStoryTarget($0, story: story) }
                 tebukuroScene = book
                 return book
             },
@@ -156,6 +185,25 @@ struct NightLibraryView: View {
             book: { [self] in tebukuroScene },
             leave: leave
         )
+    }
+
+    /// いま流す曲。開いている本の曲、本の外なら図書室の曲。物語の大事な場面では、そちらを優先する
+    private var music: StoryMusic {
+        if let music = runner.music {
+            music
+        } else if melosScene != nil {
+            .melos
+        } else if nekoScene != nil {
+            .neko
+        } else if gingaScene != nil {
+            .ginga
+        } else if yamanekoScene != nil {
+            .yamaneko
+        } else if tebukuroScene != nil {
+            .tebukuro
+        } else {
+            .nightLibrary
+        }
     }
 
     private var isInputEnabled: Bool { !runner.isRunning && !showsItems && !showsGhostBook }
@@ -311,6 +359,9 @@ struct NightLibraryView: View {
                 let finale = finale
                 runner.run { await finale.arrive() }
             }
+        }
+        .onChange(of: music, initial: true) { _, music in
+            MusicPlayer.shared.play(music)
         }
         .onChange(of: runner.isRunning) { _, isRunning in
             // 会話や演出のあいだは、日没までの時間を止める

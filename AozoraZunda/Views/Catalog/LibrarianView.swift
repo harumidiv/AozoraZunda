@@ -5,6 +5,7 @@ struct LibrarianView: View {
     @Environment(CatalogStore.self) private var catalog
     @Environment(LibraryStore.self) private var library
     @Environment(ErrandStore.self) private var errands
+    @Environment(StoryStore.self) private var story
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -171,7 +172,12 @@ struct LibrarianView: View {
             GameChoice("よむ", isEnabled: !library.isDownloading(book.id)) { read(book) },
             GameChoice("しらべる", book: book),
         ]
-        if errands.isLookingForBook && errands.carrying?.id != book.id {
+        if let task = StoryDayTask.borrowing(book, story: story) {
+            choices.append(GameChoice("かりて夜に持っていく") {
+                task.borrow(into: story)
+                borrowNote = task.borrowNote
+            })
+        } else if errands.isLookingForBook && errands.carrying?.id != book.id {
             choices.append(GameChoice("かりて届ける") {
                 errands.borrow(book)
                 borrowNote = errands.borrowNote(for: book)

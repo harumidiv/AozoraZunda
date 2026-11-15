@@ -21,8 +21,10 @@ struct Chapter5Events {
     static func objective(_ story: StoryStore) -> String {
         if story.has(.chapter5SawShadow) {
             return "おフミさんに、話しかけるのだ"
-        } else if story.has(.chapter5AskedFumi) {
+        } else if story.has(.chapter5AskedFumi) && story.has(.chapter5HeardOfHaru) {
             return "すみの棚のほうで、何かが動いたのだ"
+        } else if story.has(.chapter5AskedFumi) {
+            return "朝になったら、町の昔のことを知っている人に、はるのことを聞くのだ（出口から部屋に帰る）"
         } else if story.has(.chapter5ReadCard) {
             return "おフミさんに、カードのことを聞いてみるのだ"
         } else if story.has(.chapter5FoundGap) {
@@ -38,6 +40,11 @@ struct Chapter5Events {
     func arrive() async {
         if !story.has(.chapter5Started) {
             await opening()
+        } else if story.has(.chapter5AskedFumi) && story.has(.chapter5HeardOfHaru) && !story.has(.chapter5SawShadow) {
+            await runner.say(.fumi, "……いらっしゃい")
+            await runner.say(.zunda, "（ゲンさんの話、おフミさんに……。……あれ？）")
+            // 影は、図書室を作るときに進み具合を見て出してある
+            await runner.say(.zunda, "…………！ い、今、すみの棚のほうで、何か動いたのだ")
         } else if !story.has(.chapter5Cleared) {
             await runner.say(.fumi, "あら、いらっしゃい。……今夜も、お客さんはいないわ")
         }
@@ -113,9 +120,12 @@ struct Chapter5Events {
         await runner.say(.fumi, "……さあね")
         await runner.say(.zunda, "（おフミさんが、笑ってないのだ。……はじめて見たのだ）")
         await runner.say(.fumi, "……古いカードは、いろいろあるのよ。気にしなくていいわ")
+        await runner.say(.fumi, "……今夜は、もう閉館にしましょう。おやすみなさい、ずんだもんちゃん")
         story.set(.chapter5AskedFumi)
-        library.showShadow()
-        await runner.say(.zunda, "…………！ い、今、すみの棚のほうで、何か動いたのだ")
+        await runner.say(.zunda, "（「はる」……。むかしのことなら、町に、知ってる人がいるかもしれないのだ）")
+        await runner.blackOut(true, duration: 1.0)
+        await runner.narrate("朝になったら、町の昔のことを\n知っている人に、はるのことを聞くのだ。")
+        leave()
     }
 
     func shadow() async {
@@ -132,6 +142,9 @@ struct Chapter5Events {
         await runner.say(.zunda, "おフミさん。今、すみの棚に、本をかかえた女の子がいたのだ")
         await runner.say(.fumi, "…………そう")
         await runner.say(.zunda, "「かえさなきゃ」って、言ってたのだ")
+        await runner.say(.zunda, "それにね、町の公園のゲンさんが言ってたのだ。むかし、雪の日も窓ぎわで本を読んでた、体の弱い女の子がいたって")
+        await runner.say(.zunda, "図書館の司書さんが、その子に、よく本を届けにいってたって")
+        await runner.say(.fumi, "……………………")
         await runner.say(.fumi, "……………………")
         await runner.say(.zunda, "おフミさんが話したくないなら、聞かないのだ。でも……")
         await runner.say(.zunda, "でも、ずんだもん、思ったのだ")

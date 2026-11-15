@@ -32,6 +32,15 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     /// 調べられるものの前に立ったとき・離れたときに呼ばれる
     var onFocusChange: ((Interactable?) -> Void)?
     private(set) var focus: Interactable?
+    /// 調べるとストーリーが進むものか。true のものには、ふつうとは別の金色の吹き出しを出す
+    var isStoryTarget: ((Interactable) -> Bool)?
+    /// いま調べられるか。false のものは吹き出しを出さず、調べられないようにする（開けたあとの扉など）
+    var isAvailable: ((Interactable) -> Bool)?
+    /// 会話や演出のあいだは、吹き出しを出さない
+    var hidesBubble = false {
+        didSet { updateFocus() }
+    }
+    private var bubbleTextureName = "bubble"
     /// プレイヤーの絵の名前の頭につける文字（本の中で猫になるときなどに変える）
     var playerSpritePrefix = "player"
     /// 画面下でホームインジケーターなどに隠れる高さ（画面上のポイント）。マップの下端がその上に来るまでカメラを動かせる
@@ -42,8 +51,8 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     let rows: Int
     private let playerStart: (column: CGFloat, row: CGFloat)
     private static var walkSpeed: CGFloat { 72 }
-    /// タップした場所へは、遠くてもこの時間で着くように速さを決める
-    private static var tapWalkDuration: CGFloat { 0.3 }
+    /// タップした場所へ向かうときの速さ（距離に関係なく一定）。1秒で約20マス
+    private static var tapWalkSpeed: CGFloat { 320 }
 
     private let world = SKNode()
     private let player = SKSpriteNode()
@@ -66,6 +75,17 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
             let position = follow.node.position
             rect.origin = CGPoint(x: position.x - rect.width / 2, y: position.y - rect.height + 3)
             anchor = CGPoint(x: position.x, y: position.y + follow.anchorRise)
+        }
+
+        /// 調べる相手の足元のあたり。吹き出しは頭の上に出ているので、それより少し下とみなす
+        var target: CGPoint {
+            follow?.node.position ?? CGPoint(x: anchor.x, y: anchor.y - 20)
+        }
+
+        /// 前の範囲のほかに、相手の上下左右どこに立っても話しかけられる範囲
+        var aroundTarget: CGRect {
+            let target = target
+            return CGRect(x: target.x - 22, y: target.y - 20, width: 44, height: 40)
         }
     }
     private var isSetUp = false
@@ -106,6 +126,8 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
     }
 
     private var facing = Facing.up
+    /// いま前に立っている調べられるものの足元のあたり。止まったときにそちらを向く
+    private var focusTarget: CGPoint?
     private var playerTextureName = ""
     private var walkTime: TimeInterval = 0
     private var lastUpdate: TimeInterval?
@@ -348,8 +370,25 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
             walkTime += delta * min(3, max(1, speed / Self.walkSpeed))
         } else {
             walkTime = 0
+            if let focusTarget {
+                face(toward: focusTarget)
+            }
         }
         updatePlayerTexture(isMoving: isMoving)
+    }
+
+    /// 止まっているときに、指定した地点のほうを向く
+    private func face(toward target: CGPoint) {
+        let dx = target.x - player.position.x
+        let dy = target.y - player.position.y
+        guard hypot(dx, dy) > 2 else { return }
+        if abs(dx) > abs(dy) {
+            facing = .side
+            player.xScale = dx < 0 ? -1 : 1
+        } else {
+            facing = dy > 0 ? .up : .down
+            player.xScale = 1
+        }
     }
 
     override func didSimulatePhysics() {
@@ -493,13 +532,7 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
             waypoints.append(end)
         }
         path = waypoints
-        var length: CGFloat = 0
-        var from = start
-        for point in waypoints {
-            length += hypot(point.x - from.x, point.y - from.y)
-            from = point
-        }
-        pathSpeed = max(Self.walkSpeed, length / Self.tapWalkDuration)
+        pathSpeed = Self.tapWalkSpeed
         stuckTime = 0
         destinationMarker.position = end
         destinationMarker.isHidden = false
@@ -714,9 +747,21 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
             zones[index].track()
         }
         let feet = player.position
-        let zone = zones.first { $0.rect.contains(feet) }
-        if let zone {
+        let available = zones.filter { isAvailable?($0.interactable) ?? true }
+        // 決められた範囲に入っていればそれを、なければまわりに立っている相手のうち近いものを選ぶ。
+        // 歩き回る相手（幽霊など）は、止まっている相手より後回しにし、まわりの範囲も広げない（通りすがりに反応しないように）
+        let zone = available.first { $0.follow == nil && $0.rect.contains(feet) }
+            ?? available.first { $0.rect.contains(feet) }
+            ?? available
+            .filter { $0.follow == nil && !$0.interactable.triggersOnEnter && $0.aroundTarget.contains(feet) }
+            .min { hypot($0.target.x - feet.x, $0.target.y - feet.y) < hypot($1.target.x - feet.x, $1.target.y - feet.y) }
+        if let zone, !hidesBubble {
             bubble.isHidden = false
+            let textureName = isStoryTarget?(zone.interactable) == true ? "bubble_story" : "bubble"
+            if textureName != bubbleTextureName {
+                bubbleTextureName = textureName
+                bubble.texture = Self.texture(textureName)
+            }
             // 吹き出しはその場で上下に 2 ドット揺れるので、それより大きくずれたときだけ置き直す（動く範囲用）
             if bubble.position.x != zone.anchor.x || abs(bubble.position.y - zone.anchor.y) > 2.5 {
                 bubble.removeAllActions()
@@ -728,6 +773,11 @@ class WalkScene<Interactable: WalkInteractable>: SKScene {
             }
         } else {
             bubble.isHidden = true
+        }
+        if let zone, !zone.interactable.triggersOnEnter {
+            focusTarget = zone.target
+        } else {
+            focusTarget = nil
         }
         let newFocus = zone?.interactable
         if newFocus != focus {

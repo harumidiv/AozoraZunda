@@ -41,9 +41,14 @@ final class TVAdController: NSObject, FullScreenContentDelegate {
     /// 広告を流す。読み込めていなければ false
     func present() -> Bool {
         guard let ad, let root = Self.topViewController() else { return false }
+        // 広告の音と重ならないよう、流れている曲は止めておき、閉じたら戻す
+        musicBeforeAd = MusicPlayer.shared.current
+        MusicPlayer.shared.play(nil)
         ad.present(from: root)
         return true
     }
+
+    private var musicBeforeAd: StoryMusic?
 
     func adDidDismissFullScreenContent(_ ad: any FullScreenPresentingAd) {
         reset()
@@ -55,6 +60,10 @@ final class TVAdController: NSObject, FullScreenContentDelegate {
     }
 
     private func reset() {
+        if let musicBeforeAd {
+            MusicPlayer.shared.play(musicBeforeAd)
+            self.musicBeforeAd = nil
+        }
         ad = nil
         isReady = false
         load()

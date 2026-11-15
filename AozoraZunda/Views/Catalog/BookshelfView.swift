@@ -5,6 +5,7 @@ struct BookshelfView: View {
     @Environment(CatalogStore.self) private var catalog
     @Environment(LibraryStore.self) private var library
     @Environment(ErrandStore.self) private var errands
+    @Environment(StoryStore.self) private var story
     let label: String
     /// 司書さんに案内されたときは、この作家の仕切り板の段から表示する
     var initialAuthorID: String?
@@ -107,7 +108,12 @@ struct BookshelfView: View {
                         ChoiceLabel(title: "しらべる")
                     }
                     .buttonStyle(.plain)
-                    if errands.isLookingForBook && errands.carrying?.id != book.id {
+                    if let task = StoryDayTask.borrowing(book, story: story) {
+                        WindowChoice(title: "かりる") {
+                            task.borrow(into: story)
+                            borrowNote = task.borrowNote
+                        }
+                    } else if errands.isLookingForBook && errands.carrying?.id != book.id {
                         WindowChoice(title: "かりる") {
                             errands.borrow(book)
                             borrowNote = errands.borrowNote(for: book)

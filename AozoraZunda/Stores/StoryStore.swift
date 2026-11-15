@@ -128,6 +128,35 @@ enum StoryFlag: String, Codable, CaseIterable {
     case epilogueCleared
     /// 部屋で本物の『手袋を買いに』を読むかたずねた
     case finaleReadOffered
+
+    // MARK: 朝の町でのおつかい（夜に頼まれ、朝の現実世界で用意して、つぎの夜に持っていく）
+
+    /// 第1章: やぶれた本では入れないので、昼の図書館で『走れメロス』を借りてくることになった
+    case chapter1AskedForBook
+    /// 第1章: 昼の図書館で『走れメロス』を借りた
+    case chapter1BorrowedBook
+    /// 第1章: 借りてきた本にタクの切符をはさんだ（本の中に入れるようになった）
+    case chapter1BookReady
+    /// 第2章: タマがなくした鈴を、昼の公園でさがすことになった
+    case chapter2AskedForBell
+    /// 第2章: ゲンさんから鈴をもらった
+    case chapter2GotBell
+    /// 第3章: サチの手紙に貼る切手を、昼の町でさがすことになった
+    case chapter3AskedForStamp
+    /// 第3章: ユイさんから切手をもらった
+    case chapter3GotStamp
+    /// 第4章: 腹ぺこの兄弟に、昼のパン屋でおそなえものを用意することになった
+    case chapter4AskedForFood
+    /// 第4章: ミツさんからあんパンをもらった
+    case chapter4GotFood
+    /// 第5章: ゲンさんから、むかしの「はる」のことを聞いた
+    case chapter5HeardOfHaru
+    /// 終章: 昼の図書館で『手袋を買いに』を借りてくることになった
+    case finaleAskedForBook
+    /// 終章: 昼の図書館で『手袋を買いに』を借りた
+    case finaleBorrowedBook
+    /// 終章: 借りてきた本を、すみの棚の隙間に入れた
+    case finaleShelvedBook
 }
 
 /// ストーリーで手に入るもちもの
@@ -144,6 +173,10 @@ enum StoryItem: String, Codable, CaseIterable, Identifiable {
     case coins
     case mittens
     case tebukuroBook
+    case melosBook
+    case tamaBell
+    case stamp
+    case anpan
 
     var id: String { rawValue }
 
@@ -161,6 +194,10 @@ enum StoryItem: String, Codable, CaseIterable, Identifiable {
         case .coins: "二つの白銅貨"
         case .mittens: "毛糸の手袋"
         case .tebukuroBook: "『手袋を買いに』"
+        case .melosBook: "『走れメロス』"
+        case .tamaBell: "ちいさな鈴"
+        case .stamp: "銀河の切手"
+        case .anpan: "あんパン ふたつ"
         }
     }
 
@@ -171,13 +208,17 @@ enum StoryItem: String, Codable, CaseIterable, Identifiable {
         case .tatteredBook: "タクの『走れメロス』。川のところから先のページが破れている"
         case .ticketBookmark: "電車の切符。タクがしおりにしていた"
         case .annotatedBook: "キヨさんの『吾輩は猫である』。ページのあちこちに鉛筆の書き込みがある"
-        case .unsentLetter: "サチが『銀河鉄道の夜』の作者に書いた手紙。切手はまだ貼られていない"
+        case .unsentLetter: "サチが『銀河鉄道の夜』の作者に書いた手紙。星空と汽車の切手が、まっすぐ貼ってある"
         case .apple: "燈台看守にもらった、黄金と紅の大きな苹果"
         case .orderKey: "兄弟の『注文の多い料理店』にはさまっていた鍵。「どなたもどうかお入りください」と書いた札がついている"
         case .lendingCard: "『手袋を買いに』の貸出カード。返却日の欄は空っぽで、最後の名前は子どもの丸い字で「はる」"
         case .coins: "狐の母さんにもらった白銅貨。カチ合せると、チンチンとよい音がする"
         case .mittens: "帽子屋さんで買った、子供用の毛糸の手袋。赤くて、あったかい"
-        case .tebukuroBook: "はるがずっとかかえていた、青い表紙の本。押し花のしおりがはさまっていた"
+        case .tebukuroBook: "昼の町の図書館で借りた『手袋を買いに』。すみの棚の、一冊ぶんの隙間に入る本"
+        case .melosBook: "昼の町の図書館で借りた『走れメロス』。川のところから先のページも、ちゃんとある"
+        case .tamaBell: "公園のベンチの下に落ちていた、古い猫の鈴。振ると、ちりんとやさしい音がする"
+        case .stamp: "ユイさんにもらった、星空と汽車の絵の記念切手"
+        case .anpan: "ミツさんのパン屋のあんパン。焼きたてで、まだあったかい"
         }
     }
 
@@ -196,6 +237,10 @@ enum StoryItem: String, Codable, CaseIterable, Identifiable {
         case .coins: "sprite_item_coins"
         case .mittens: "sprite_item_mittens"
         case .tebukuroBook: "sprite_item_tebukuro_book"
+        case .melosBook: "sprite_item_melos_book"
+        case .tamaBell: "sprite_item_tama_bell"
+        case .stamp: "sprite_item_stamp"
+        case .anpan: "sprite_item_anpan"
         }
     }
 }

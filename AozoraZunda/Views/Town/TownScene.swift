@@ -69,7 +69,7 @@ final class TownScene: WalkScene<TownInteractable> {
         carriedBook.zPosition = 1
         attachToPlayer(carriedBook)
         showCarriedBook(isCarryingBook)
-        updateMarks(wishing: wishingPeople)
+        updateMarks(wishing: wishingPeople, story: storyPerson)
     }
 
     // MARK: - 地面
@@ -206,16 +206,23 @@ final class TownScene: WalkScene<TownInteractable> {
 
     /// 印を出す人（マップを作る前に指定されたときは、作ったあとに出す）
     private var wishingPeople: Set<Townsperson> = []
+    private var storyPerson: Townsperson?
     private var isCarryingBook = false
 
-    /// 新しい頼みごとがある人・借りた本を待っている人の頭の上に印を出す
-    func updateMarks(wishing: Set<Townsperson>) {
+    /// 新しい頼みごとがある人・借りた本を待っている人の頭の上に印を出す。
+    /// story の人（朝のおつかいの相手）には、ストーリーが進む金色の印を出す
+    func updateMarks(wishing: Set<Townsperson>, story: Townsperson? = nil) {
         wishingPeople = wishing
+        storyPerson = story
         for person in Townsperson.allCases {
             guard let node = people[person] else { continue }
-            if wishing.contains(person) {
-                guard wishMarks[person] == nil else { continue }
-                let mark = SKSpriteNode(texture: Self.texture("bubble"))
+            if wishing.contains(person) || person == story {
+                let textureName = person == story ? "bubble_story" : "bubble"
+                if let mark = wishMarks[person] {
+                    mark.texture = Self.texture(textureName)
+                    continue
+                }
+                let mark = SKSpriteNode(texture: Self.texture(textureName))
                 mark.anchorPoint = CGPoint(x: 0.5, y: 0)
                 mark.position = CGPoint(x: 0, y: 16)
                 mark.zPosition = 2

@@ -154,6 +154,8 @@ final class StoryRunner {
     private(set) var isBlackedOut = false
     /// 本の一節を見せるときに添える出典（「『走れメロス』太宰治」など）
     var passageSource = ""
+    /// 物語の大事な場面で、マップの曲のかわりに流す曲（nil ならマップの曲）
+    var music: StoryMusic?
     private var continuation: CheckedContinuation<Int, Never>?
 
     /// イベントを始める。ほかのイベント中なら何もしない

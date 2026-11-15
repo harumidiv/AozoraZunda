@@ -51,6 +51,15 @@ struct ContentView: View {
                     .transition(.opacity)
             }
         }
+        .onChange(of: place, initial: true) { _, place in
+            // 夜間図書室の曲は、本の中かどうかで変わるので NightLibraryView が決める
+            switch place {
+            case .room: MusicPlayer.shared.play(.room)
+            case .town: MusicPlayer.shared.play(.town)
+            case .library: MusicPlayer.shared.play(nil)
+            case .nightLibrary: break
+            }
+        }
     }
 
     /// fromLibrary: 部屋に帰るとき、ドアの前から始めるか（夜間図書室から帰ったときは、朝になってベッドのそばから）

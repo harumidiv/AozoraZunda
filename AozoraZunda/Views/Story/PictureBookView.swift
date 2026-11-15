@@ -81,8 +81,15 @@ struct PictureBookView: View {
             }
             .padding(.horizontal, 20)
         }
-        .onAppear(perform: readCurrentPage)
-        .onDisappear { voice.stop() }
+        .onAppear {
+            // 読み上げの声が聞こえるよう、曲は小さくしておく
+            MusicPlayer.shared.setDucked(true)
+            readCurrentPage()
+        }
+        .onDisappear {
+            voice.stop()
+            MusicPlayer.shared.setDucked(false)
+        }
     }
 
     private var pageView: some View {
